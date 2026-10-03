@@ -29,6 +29,16 @@ class StockMovementResource extends Resource
     // stock_movements no tiene store_id: el filtro por tienda se hace en getEloquentQuery().
     protected static bool $isScopedToTenant = false;
 
+    public static function getTitleCaseModelLabel(): string
+    {
+        return 'Movimiento de stock';
+    }
+
+    public static function getTitleCasePluralModelLabel(): string
+    {
+        return 'Movimientos de stock';
+    }
+
     public static function canCreate(): bool
     {
         return false;

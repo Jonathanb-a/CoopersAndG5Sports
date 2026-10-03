@@ -16,7 +16,7 @@ enum SizeType: string implements HasLabel
         return match ($this) {
             self::Footwear => 'Calzado',
             self::Clothing => 'Ropa',
-            self::Kids => 'Kids',
+            self::Kids => 'Niños',
             self::OneSize => 'Talla única',
         };
     }

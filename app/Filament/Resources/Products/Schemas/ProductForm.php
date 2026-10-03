@@ -114,6 +114,7 @@ class ProductForm
                     ->description('El stock inicial se captura solo al crear el producto y se registra como una entrada. Después se cambia con la acción «Ajustar stock» de cada talla.')
                     ->schema([
                         Repeater::make('variants')
+                            ->label('Tallas')
                             ->hiddenLabel()
                             ->relationship()
                             ->columns(4)
@@ -151,6 +152,7 @@ class ProductForm
                     ->columnSpanFull()
                     ->schema([
                         FileUpload::make('photos')
+                            ->label('Fotos')
                             ->hiddenLabel()
                             ->image()
                             ->multiple()

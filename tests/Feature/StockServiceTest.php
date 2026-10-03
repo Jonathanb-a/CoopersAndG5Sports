@@ -28,7 +28,7 @@ class StockServiceTest extends TestCase
     {
         parent::setUp();
 
-        $store = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        $store = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
         $category = Category::create(['store_id' => $store->id, 'name' => 'Calzado', 'slug' => 'calzado', 'size_type' => SizeType::Footwear]);
         $product = Product::create(['store_id' => $store->id, 'category_id' => $category->id, 'name' => 'Tenis', 'slug' => 'tenis', 'price' => 100]);
 

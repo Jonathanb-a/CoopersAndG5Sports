@@ -27,7 +27,7 @@ class StockPanelTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Store $coopers;
+    private Store $coppers;
 
     private Store $g5;
 
@@ -39,8 +39,8 @@ class StockPanelTest extends TestCase
     {
         parent::setUp();
 
-        $this->coopers = Store::create(['name' => 'Coopers', 'slug' => 'coopers', 'domain' => 'coopers.localhost']);
-        $this->g5 = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost']);
+        $this->g5 = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
         $this->g5Category = Category::create(['store_id' => $this->g5->id, 'name' => 'Calzado', 'slug' => 'calzado', 'size_type' => SizeType::Footwear]);
         $this->owner = User::factory()->create(['role' => UserRole::Owner]);
     }
@@ -214,7 +214,7 @@ class StockPanelTest extends TestCase
         $service = app(StockService::class);
 
         $mine = $this->product($this->g5, 'Mio', ['M' => 0]);
-        $theirs = $this->product($this->coopers, 'Ajeno', ['M' => 0]);
+        $theirs = $this->product($this->coppers, 'Ajeno', ['M' => 0]);
         $trashed = $this->product($this->g5, 'Borrado', ['M' => 0]);
 
         $entry = $service->change($mine->variants->first(), StockMovementType::Entry, 5, $this->owner, 'Compra');
@@ -251,6 +251,6 @@ class StockPanelTest extends TestCase
         $staff->stores()->attach($this->g5->id);
 
         $this->actingAs($staff)->get('/admin/g5/stock-movements')->assertOk();
-        $this->get('/admin/coopers/stock-movements')->assertNotFound();
+        $this->get('/admin/coppers/stock-movements')->assertNotFound();
     }
 }

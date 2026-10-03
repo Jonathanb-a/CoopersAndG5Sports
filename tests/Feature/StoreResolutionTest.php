@@ -20,8 +20,8 @@ class StoreResolutionTest extends TestCase
         $this->withoutVite();
 
         $stores = [
-            ['slug' => 'coopers', 'name' => 'Coopers', 'domain' => 'coopers.localhost', 'products' => ['Camisa Oxford', 'Pantalón Chino']],
-            ['slug' => 'g5', 'name' => 'G5 Esports', 'domain' => 'g5.localhost', 'products' => ['Nike Mercurial Vapor']],
+            ['slug' => 'coppers', 'name' => "Copper's", 'domain' => 'coppers.localhost', 'products' => ['Camisa Oxford', 'Pantalón Chino']],
+            ['slug' => 'g5', 'name' => 'Sports G5', 'domain' => 'g5.localhost', 'products' => ['Nike Mercurial Vapor']],
         ];
 
         foreach ($stores as $data) {
@@ -51,14 +51,14 @@ class StoreResolutionTest extends TestCase
         }
     }
 
-    public function test_coopers_domain_shows_only_coopers_products()
+    public function test_coppers_domain_shows_only_coppers_products()
     {
-        $this->get('http://coopers.localhost/')
+        $this->get('http://coppers.localhost/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('home')
-                ->where('store.slug', 'coopers')
-                ->where('store.name', 'Coopers')
+                ->where('store.slug', 'coppers')
+                ->where('store.name', "Copper's")
                 ->has('products', 2)
                 ->where('products.0.name', 'Camisa Oxford')
                 ->where('products.1.name', 'Pantalón Chino'));
@@ -78,9 +78,9 @@ class StoreResolutionTest extends TestCase
 
     public function test_the_port_is_ignored_when_resolving_the_store()
     {
-        $this->get('http://coopers.localhost:8000/')
+        $this->get('http://coppers.localhost:8000/')
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('store.slug', 'coopers'));
+            ->assertInertia(fn (Assert $page) => $page->where('store.slug', 'coppers'));
     }
 
     public function test_unknown_domain_responds_404()

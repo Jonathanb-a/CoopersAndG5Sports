@@ -26,7 +26,7 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Store $coopers;
+    private Store $coppers;
 
     private Store $g5;
 
@@ -34,20 +34,20 @@ class DashboardTest extends TestCase
 
     private User $staffG5;
 
-    private User $staffCoopers;
+    private User $staffCoppers;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->coopers = Store::create(['name' => 'Coopers', 'slug' => 'coopers', 'domain' => 'coopers.localhost']);
-        $this->g5 = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost']);
+        $this->g5 = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
 
         $this->owner = User::factory()->create(['role' => UserRole::Owner]);
         $this->staffG5 = User::factory()->create(['role' => UserRole::Staff]);
         $this->staffG5->stores()->attach($this->g5->id);
-        $this->staffCoopers = User::factory()->create(['role' => UserRole::Staff]);
-        $this->staffCoopers->stores()->attach($this->coopers->id);
+        $this->staffCoppers = User::factory()->create(['role' => UserRole::Staff]);
+        $this->staffCoppers->stores()->attach($this->coppers->id);
     }
 
     private function panelAs(User $user, Store $store): void
@@ -93,17 +93,17 @@ class DashboardTest extends TestCase
         $stock->change($small, StockMovementType::Entry, 1, $this->staffG5);
         $this->assertSame(0, $this->staffG5->notifications()->count());
 
-        // Dejar una talla en 0 avisa al staff de G5, no al de Coopers.
+        // Dejar una talla en 0 avisa al staff de G5, no al de Copper's.
         $stock->change($small, StockMovementType::Adjustment, -3, $this->staffG5);
 
         $this->assertSame(1, $this->staffG5->notifications()->count());
-        $this->assertSame(0, $this->staffCoopers->notifications()->count());
+        $this->assertSame(0, $this->staffCoppers->notifications()->count());
 
         $data = $this->staffG5->notifications()->first()->data;
         $this->assertSame('Talla agotada', $data['title']);
         $this->assertStringContainsString('talla 26', $data['body']);
         $this->assertStringContainsString('Tenis Predator', $data['body']);
-        $this->assertStringContainsString('G5 Esports', $data['body']);
+        $this->assertStringContainsString('Sports G5', $data['body']);
         $this->assertStringNotContainsString('todo el producto', $data['body']);
         $this->assertStringContainsString("/admin/g5/products/{$product->id}/edit", $data['actions'][0]['url']);
 
@@ -124,7 +124,7 @@ class DashboardTest extends TestCase
 
         $last = $this->staffG5->notifications()->get()->first(fn ($n) => $n->data['title'] === 'Producto agotado');
         $this->assertStringContainsString('se agotó todo el producto «Tenis Predator»', $last->data['body']);
-        $this->assertSame(0, $this->staffCoopers->notifications()->count());
+        $this->assertSame(0, $this->staffCoppers->notifications()->count());
     }
 
     public function test_the_bell_shows_the_notification_to_the_user()
@@ -172,7 +172,7 @@ class DashboardTest extends TestCase
         // En la papelera: no cuenta.
         $this->product($this->g5, 'Borrado', ['M' => 10])->delete();
         // Otra tienda: no cuenta.
-        $this->product($this->coopers, 'Ajeno', ['M' => 99]);
+        $this->product($this->coppers, 'Ajeno', ['M' => 99]);
 
         $summary = app(InventoryReport::class)->summary($this->g5);
 
@@ -196,7 +196,7 @@ class DashboardTest extends TestCase
         $yellowOne = $this->product($this->g5, 'Amarillo uno', ['M' => 1, 'L' => 0]);
         $green = $this->product($this->g5, 'Verde', ['M' => 3]);
         $inactive = $this->product($this->g5, 'Inactivo rojo', ['M' => 0], ['is_active' => false]);
-        $other = $this->product($this->coopers, 'Rojo ajeno', ['M' => 0]);
+        $other = $this->product($this->coppers, 'Rojo ajeno', ['M' => 0]);
 
         $this->panelAs($this->staffG5, $this->g5);
 
@@ -224,7 +224,7 @@ class DashboardTest extends TestCase
             $movements[$i] = $movement;
         }
 
-        $theirs = $service->change($this->product($this->coopers, 'Ajeno', ['M' => 0])->variants->first(), StockMovementType::Entry, 5);
+        $theirs = $service->change($this->product($this->coppers, 'Ajeno', ['M' => 0])->variants->first(), StockMovementType::Entry, 5);
 
         $this->panelAs($this->staffG5, $this->g5);
 
@@ -244,7 +244,7 @@ class DashboardTest extends TestCase
         $this->product($this->g5, 'Tenis dos', ['26' => 1], category: 'Calzado');
         $this->product($this->g5, 'Jersey', ['M' => 4], category: 'Jerseys');
         $this->product($this->g5, 'Borrado', ['M' => 50], category: 'Jerseys')->delete();
-        $this->product($this->coopers, 'Ajeno', ['M' => 99], category: 'Ropa');
+        $this->product($this->coppers, 'Ajeno', ['M' => 99], category: 'Ropa');
         Category::create(['store_id' => $this->g5->id, 'name' => 'Vacía', 'slug' => 'vacia', 'size_type' => SizeType::OneSize]);
 
         $this->assertSame(['Calzado' => 6, 'Jerseys' => 4], app(InventoryReport::class)->piecesByCategory($this->g5));

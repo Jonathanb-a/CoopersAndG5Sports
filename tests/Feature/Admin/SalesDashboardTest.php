@@ -34,7 +34,7 @@ class SalesDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Store $coopers;
+    private Store $coppers;
 
     private Store $g5;
 
@@ -42,7 +42,7 @@ class SalesDashboardTest extends TestCase
 
     private User $staffG5;
 
-    private User $staffCoopers;
+    private User $staffCoppers;
 
     private ProductVariant $expensive;
 
@@ -55,14 +55,14 @@ class SalesDashboardTest extends TestCase
         // Jueves 15 de octubre de 2026, 2:00 p. m.
         $this->travelTo(Carbon::parse('2026-10-15 14:00:00'));
 
-        $this->coopers = Store::create(['name' => 'Coopers', 'slug' => 'coopers', 'domain' => 'coopers.localhost']);
-        $this->g5 = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost']);
+        $this->g5 = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
 
         $this->owner = User::factory()->create(['role' => UserRole::Owner]);
         $this->staffG5 = User::factory()->create(['role' => UserRole::Staff]);
         $this->staffG5->stores()->attach($this->g5->id);
-        $this->staffCoopers = User::factory()->create(['role' => UserRole::Staff]);
-        $this->staffCoopers->stores()->attach($this->coopers->id);
+        $this->staffCoppers = User::factory()->create(['role' => UserRole::Staff]);
+        $this->staffCoppers->stores()->attach($this->coppers->id);
 
         $this->expensive = $this->variant($this->g5, 'Tenis P1', price: 500, cost: 100);
         $this->cheap = $this->variant($this->g5, 'Playera P2', price: 250, cost: 50);
@@ -138,8 +138,8 @@ class SalesDashboardTest extends TestCase
         $this->order('E', OrderStatus::Reserved, 700, null, expiresAt: '2026-10-16 10:00:00');
         $this->order('F', OrderStatus::Paid, 300, '2026-09-05 10:00:00', items: [[$this->cheap, 1, 300]]);
 
-        $other = $this->variant($this->coopers, 'Ajeno', price: 100, cost: 10);
-        $this->order('G', OrderStatus::Paid, 5000, '2026-10-15 08:00:00', store: $this->coopers, items: [[$other, 3, 100]]);
+        $other = $this->variant($this->coppers, 'Ajeno', price: 100, cost: 10);
+        $this->order('G', OrderStatus::Paid, 5000, '2026-10-15 08:00:00', store: $this->coppers, items: [[$other, 3, 100]]);
     }
 
     private function panelAs(User $user, Store $store): void
@@ -193,9 +193,9 @@ class SalesDashboardTest extends TestCase
         $this->assertSame(1350.0, $week['profit']);
 
         // Otra tienda: solo sus propias ventas.
-        $coopers = $report->summary($this->coopers, ...SalesPeriod::Week->range());
-        $this->assertSame(5000.0, $coopers['sales']);
-        $this->assertSame(1, $coopers['orders']);
+        $coppers = $report->summary($this->coppers, ...SalesPeriod::Week->range());
+        $this->assertSame(5000.0, $coppers['sales']);
+        $this->assertSame(1, $coppers['orders']);
     }
 
     public function test_a_cancelled_order_does_not_count_as_a_sale()
@@ -284,7 +284,7 @@ class SalesDashboardTest extends TestCase
             $orders[$i] = $this->order(sprintf('P-%02d', $i), OrderStatus::Paid, 100 + $i, createdAt: now()->subHours(13 - $i)->toDateTimeString(), channel: OrderChannel::Counter);
         }
         $orders[12]->update(['customer_id' => $customer->id]);
-        $theirs = $this->order('X-01', OrderStatus::Paid, 50, store: $this->coopers, channel: OrderChannel::Counter);
+        $theirs = $this->order('X-01', OrderStatus::Paid, 50, store: $this->coppers, channel: OrderChannel::Counter);
 
         $this->panelAs($this->staffG5, $this->g5);
 
@@ -344,7 +344,7 @@ class SalesDashboardTest extends TestCase
         $later = $this->order('R-4', OrderStatus::Reserved, 400, expiresAt: '2026-10-16 08:00:00');     // en 18 h
         $paid = $this->order('R-5', OrderStatus::Paid, 500, '2026-10-15 13:00:00', expiresAt: '2026-10-15 15:00:00');
         $cancelled = $this->order('R-6', OrderStatus::Cancelled, 600, expiresAt: '2026-10-15 15:00:00');
-        $other = $this->order('R-7', OrderStatus::Reserved, 700, store: $this->coopers, expiresAt: '2026-10-15 15:00:00');
+        $other = $this->order('R-7', OrderStatus::Reserved, 700, store: $this->coppers, expiresAt: '2026-10-15 15:00:00');
 
         $this->panelAs($this->staffG5, $this->g5);
 
@@ -360,20 +360,20 @@ class SalesDashboardTest extends TestCase
         $order = $this->order('W-1', OrderStatus::Reserved, 1234.50, expiresAt: '2026-10-16 10:00:00');
 
         $this->assertSame(1, $this->staffG5->notifications()->count());
-        $this->assertSame(0, $this->staffCoopers->notifications()->count());
+        $this->assertSame(0, $this->staffCoppers->notifications()->count());
         $this->assertSame(1, $this->owner->notifications()->count());
 
         $data = $this->staffG5->notifications()->first()->data;
         $this->assertSame('Pedido nuevo', $data['title']);
         $this->assertStringContainsString('W-1', $data['body']);
         $this->assertStringContainsString('$1,234.50', $data['body']);
-        $this->assertStringContainsString('G5 Esports', $data['body']);
+        $this->assertStringContainsString('Sports G5', $data['body']);
         $this->assertStringContainsString("/admin/g5/orders/{$order->id}", $data['actions'][0]['url']);
 
         // Un pedido de otra tienda avisa a la otra tienda.
-        $this->order('W-2', OrderStatus::Reserved, 50, store: $this->coopers);
+        $this->order('W-2', OrderStatus::Reserved, 50, store: $this->coppers);
         $this->assertSame(1, $this->staffG5->notifications()->count());
-        $this->assertSame(1, $this->staffCoopers->notifications()->count());
+        $this->assertSame(1, $this->staffCoppers->notifications()->count());
     }
 
     public function test_counter_sales_do_not_notify()
@@ -387,7 +387,7 @@ class SalesDashboardTest extends TestCase
     public function test_orders_pages_are_scoped_to_the_store()
     {
         $mine = $this->order('G5-001', OrderStatus::Paid, 1000, '2026-10-15 10:00:00', items: [[$this->expensive, 2, 500]]);
-        $theirs = $this->order('CP-001', OrderStatus::Paid, 80, '2026-10-15 10:00:00', store: $this->coopers);
+        $theirs = $this->order('CP-001', OrderStatus::Paid, 80, '2026-10-15 10:00:00', store: $this->coppers);
 
         $this->actingAs($this->staffG5);
 

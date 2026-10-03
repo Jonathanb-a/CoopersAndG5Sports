@@ -27,13 +27,13 @@ class DatabaseSeeder extends Seeder
         }
 
         $stores = [
-            'coopers' => Store::updateOrCreate(
-                ['slug' => 'coopers'],
-                ['name' => 'Coopers', 'domain' => 'coopers.localhost', 'theme' => 'coopers', 'is_active' => true],
+            'coppers' => Store::updateOrCreate(
+                ['slug' => 'coppers'],
+                ['name' => "Copper's", 'domain' => 'coppers.localhost', 'theme' => 'coppers', 'is_active' => true],
             ),
             'g5' => Store::updateOrCreate(
                 ['slug' => 'g5'],
-                ['name' => 'G5 Esports', 'domain' => 'g5.localhost', 'theme' => 'g5', 'is_active' => true],
+                ['name' => 'Sports G5', 'domain' => 'g5.localhost', 'theme' => 'g5', 'is_active' => true],
             ),
         ];
 
@@ -44,7 +44,7 @@ class DatabaseSeeder extends Seeder
 
         // Staff de prueba: usan la misma contraseña que el owner (ADMIN_PASSWORD).
         $staff = [
-            'coopers' => ['name' => 'Staff Coopers', 'email' => 'staff@coopers.localhost'],
+            'coppers' => ['name' => "Staff Copper's", 'email' => 'staff@coppers.localhost'],
             'g5' => ['name' => 'Staff G5', 'email' => 'staff@g5.localhost'],
         ];
 
@@ -62,7 +62,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $catalog = [
-            'coopers' => [
+            'coppers' => [
                 'categories' => [
                     ['name' => 'Camisas', 'slug' => 'camisas', 'size_type' => SizeType::Clothing],
                     ['name' => 'Pantalones', 'slug' => 'pantalones', 'size_type' => SizeType::Clothing],

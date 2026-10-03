@@ -21,7 +21,7 @@ class PanelTenancyTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Store $coopers;
+    private Store $coppers;
 
     private Store $g5;
 
@@ -29,8 +29,8 @@ class PanelTenancyTest extends TestCase
     {
         parent::setUp();
 
-        $this->coopers = Store::create(['name' => 'Coopers', 'slug' => 'coopers', 'domain' => 'coopers.localhost', 'theme' => 'coopers']);
-        $this->g5 = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost', 'theme' => 'g5']);
+        $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost', 'theme' => 'coppers']);
+        $this->g5 = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost', 'theme' => 'g5']);
     }
 
     private function owner(): User
@@ -50,16 +50,16 @@ class PanelTenancyTest extends TestCase
     {
         $this->actingAs($this->owner());
 
-        $this->get('/admin/coopers')->assertOk();
+        $this->get('/admin/coppers')->assertOk();
         $this->get('/admin/g5')->assertOk();
     }
 
-    public function test_g5_staff_enters_g5_and_gets_404_on_coopers()
+    public function test_g5_staff_enters_g5_and_gets_404_on_coppers()
     {
         $this->actingAs($this->staffOf($this->g5));
 
         $this->get('/admin/g5')->assertOk();
-        $this->get('/admin/coopers')->assertNotFound();
+        $this->get('/admin/coppers')->assertNotFound();
     }
 
     public function test_staff_cannot_see_users_or_store_profile()
@@ -79,10 +79,10 @@ class PanelTenancyTest extends TestCase
     {
         $this->actingAs($this->owner());
 
-        $this->get('/admin/coopers/users')->assertOk();
-        $this->get('/admin/coopers/profile')->assertOk();
+        $this->get('/admin/coppers/users')->assertOk();
+        $this->get('/admin/coppers/profile')->assertOk();
 
-        $this->get('/admin/coopers')
+        $this->get('/admin/coppers')
             ->assertSee('Usuarios')
             ->assertSee('Datos de la tienda');
     }
@@ -95,12 +95,12 @@ class PanelTenancyTest extends TestCase
         $owner = $this->owner();
         $staff = $this->staffOf($this->g5, $inactive);
 
-        $this->assertEqualsCanonicalizing(['coopers', 'g5'], $this->tenantSlugs($owner, $panel));
+        $this->assertEqualsCanonicalizing(['coppers', 'g5'], $this->tenantSlugs($owner, $panel));
         $this->assertSame(['g5'], $this->tenantSlugs($staff, $panel));
 
         $this->actingAs($staff)->get('/admin/g5')
-            ->assertSee('G5 Esports')
-            ->assertDontSee('Coopers')
+            ->assertSee('Sports G5')
+            ->assertDontSee("Copper's")
             ->assertDontSee('Cerrada');
 
         $this->actingAs($owner)->get('/admin/cerrada')->assertNotFound();
@@ -110,7 +110,7 @@ class PanelTenancyTest extends TestCase
     {
         $this->actingAs($this->owner());
         Filament::setCurrentPanel('admin');
-        Filament::setTenant($this->coopers);
+        Filament::setTenant($this->coppers);
 
         Livewire::test(CreateUser::class)
             ->fillForm([
@@ -134,11 +134,11 @@ class PanelTenancyTest extends TestCase
     {
         $this->actingAs($this->owner());
         Filament::setCurrentPanel('admin');
-        Filament::setTenant($this->coopers);
+        Filament::setTenant($this->coppers);
 
         Livewire::test(EditStoreProfile::class)
             ->fillForm([
-                'name' => 'Coopers MX',
+                'name' => "Copper's MX",
                 'whatsapp_phone' => '5512345678',
                 'telegram_chat_id' => '12345',
                 'bank_info' => 'Banco X',
@@ -147,20 +147,20 @@ class PanelTenancyTest extends TestCase
             ->call('save')
             ->assertHasNoFormErrors();
 
-        $this->assertSame('Coopers MX', $this->coopers->fresh()->name);
-        $this->assertSame('5512345678', $this->coopers->fresh()->whatsapp_phone);
+        $this->assertSame("Copper's MX", $this->coppers->fresh()->name);
+        $this->assertSame('5512345678', $this->coppers->fresh()->whatsapp_phone);
     }
 
     public function test_belongs_to_store_trait_does_not_interfere_with_the_panel()
     {
-        foreach ([$this->coopers, $this->g5] as $store) {
+        foreach ([$this->coppers, $this->g5] as $store) {
             $category = Category::create(['store_id' => $store->id, 'name' => 'General', 'slug' => 'general', 'size_type' => SizeType::OneSize]);
             Product::create(['store_id' => $store->id, 'category_id' => $category->id, 'name' => "Producto {$store->slug}", 'slug' => 'producto', 'price' => 10]);
         }
 
         $this->actingAs($this->owner());
 
-        $this->get('/admin/coopers')->assertOk();
+        $this->get('/admin/coppers')->assertOk();
         $this->get('/admin/g5')->assertOk();
 
         $this->assertFalse(app()->bound('currentStore'));

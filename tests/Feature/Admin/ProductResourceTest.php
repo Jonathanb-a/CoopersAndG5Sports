@@ -27,11 +27,11 @@ class ProductResourceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Store $coopers;
+    private Store $coppers;
 
     private Store $g5;
 
-    private Category $coopersCategory;
+    private Category $coppersCategory;
 
     private Category $g5Category;
 
@@ -39,10 +39,10 @@ class ProductResourceTest extends TestCase
     {
         parent::setUp();
 
-        $this->coopers = Store::create(['name' => 'Coopers', 'slug' => 'coopers', 'domain' => 'coopers.localhost']);
-        $this->g5 = Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost']);
+        $this->g5 = Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
 
-        $this->coopersCategory = $this->category($this->coopers, 'Camisas');
+        $this->coppersCategory = $this->category($this->coppers, 'Camisas');
         $this->g5Category = $this->category($this->g5, 'Calzado');
     }
 
@@ -122,7 +122,7 @@ class ProductResourceTest extends TestCase
         $this->panelAs(UserRole::Owner, $this->g5);
 
         Livewire::test(CreateProduct::class)
-            ->fillForm($this->formData($this->coopersCategory))
+            ->fillForm($this->formData($this->coppersCategory))
             ->call('create')
             ->assertHasFormErrors(['category_id']);
 
@@ -173,9 +173,9 @@ class ProductResourceTest extends TestCase
     public function test_same_slug_is_allowed_across_stores_but_not_within_one_store()
     {
         // Via formulario
-        $this->panelAs(UserRole::Owner, $this->coopers);
+        $this->panelAs(UserRole::Owner, $this->coppers);
         Livewire::test(CreateProduct::class)
-            ->fillForm($this->formData($this->coopersCategory, ['name' => 'Camisa', 'color' => 'Azul']))
+            ->fillForm($this->formData($this->coppersCategory, ['name' => 'Camisa', 'color' => 'Azul']))
             ->call('create')
             ->assertHasNoFormErrors();
 
@@ -191,7 +191,7 @@ class ProductResourceTest extends TestCase
             ->assertHasFormErrors(['slug' => 'unique']);
 
         $this->assertSame(
-            [$this->coopers->id, $this->g5->id],
+            [$this->coppers->id, $this->g5->id],
             Product::withoutGlobalScopes()->where('slug', 'camisa-azul')->orderBy('store_id')->pluck('store_id')->all(),
         );
 
@@ -246,7 +246,7 @@ class ProductResourceTest extends TestCase
     public function test_product_list_is_scoped_to_the_tenant_and_supports_trash_and_restore()
     {
         $mine = $this->product($this->g5, $this->g5Category, 'Balón', 'Blanco');
-        $other = $this->product($this->coopers, $this->coopersCategory, 'Camisa', 'Azul');
+        $other = $this->product($this->coppers, $this->coppersCategory, 'Camisa', 'Azul');
 
         $this->panelAs(UserRole::Owner, $this->g5);
 

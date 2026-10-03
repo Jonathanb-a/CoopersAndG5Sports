@@ -11,7 +11,7 @@ use Throwable;
 class ImportStore extends Command
 {
     protected $signature = 'store:import
-        {store_slug : Slug de la tienda (coopers, g5)}
+        {store_slug : Slug de la tienda (coppers, g5)}
         {archivo : Ruta del Excel del cliente (o nombre dentro de storage/app/imports)}
         {--dry-run : No escribe nada; solo muestra un resumen por hoja}';
 

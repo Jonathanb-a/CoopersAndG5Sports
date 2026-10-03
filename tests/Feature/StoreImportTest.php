@@ -33,7 +33,7 @@ class StoreImportTest extends TestCase
         parent::setUp();
 
         Storage::fake('public');
-        Store::create(['name' => 'G5 Esports', 'slug' => 'g5', 'domain' => 'g5.localhost']);
+        Store::create(['name' => 'Sports G5', 'slug' => 'g5', 'domain' => 'g5.localhost']);
 
         $this->png = sys_get_temp_dir().'/import-test-'.uniqid().'.png';
         $image = imagecreatetruecolor(8, 8);

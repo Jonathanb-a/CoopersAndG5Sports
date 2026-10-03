@@ -63,8 +63,7 @@ class StoreResolutionTest extends TestCase
                 ->where('store.theme', 'coppers')
                 ->where('store.whatsapp_phone', '5512345678')
                 ->has('categories', 1)
-                ->where('categories.0.name', 'Camisas')
-                ->missing('products'));
+                ->where('categories.0.name', 'Camisas'));
     }
 
     public function test_g5_domain_shares_its_own_store_theme_and_categories()

@@ -16,6 +16,7 @@ class Store extends Model
         'whatsapp_phone',
         'telegram_chat_id',
         'bank_info',
+        'about_text',
         'is_active',
     ];
 

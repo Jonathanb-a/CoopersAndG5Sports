@@ -40,7 +40,8 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // Relativa: las imágenes deben cargar desde el dominio de cada tienda (coppers.localhost, g5.localhost...).
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
         ],

@@ -40,6 +40,10 @@ class EditStoreProfile extends EditTenantProfile
                 Textarea::make('bank_info')
                     ->label('Datos bancarios')
                     ->rows(4),
+                Textarea::make('about_text')
+                    ->label('Quiénes somos')
+                    ->helperText('Se muestra en el inicio de la tienda. Déjalo vacío para ocultar la sección.')
+                    ->rows(6),
                 Toggle::make('is_active')
                     ->label('Tienda activa'),
             ]);

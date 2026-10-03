@@ -1,0 +1,38 @@
+import { cn } from '@/lib/utils';
+import { type CategoryCard as CategoryCardData } from '@/types';
+
+interface CategoryCardProps {
+    category: CategoryCardData;
+    className?: string;
+}
+
+/** Acceso a una categoría: foto de uno de sus productos, nombre y cuántos productos tiene. */
+export function CategoryCard({ category, className }: CategoryCardProps) {
+    return (
+        // Las páginas de categoría llegan con el catálogo; por ahora el acceso no navega.
+        <a
+            href="#"
+            onClick={(event) => event.preventDefault()}
+            className={cn(
+                'group store-surface store-transition store-lift focus-visible:outline-store-accent block overflow-hidden focus-visible:outline-2',
+                className,
+            )}
+        >
+            <div className="bg-store-bg relative aspect-[4/3] overflow-hidden">
+                {category.image_url ? (
+                    <img src={category.image_url} alt="" loading="lazy" className="store-transition size-full object-cover group-hover:scale-105" />
+                ) : (
+                    <div className="store-heading text-store-muted flex size-full items-center justify-center text-6xl" aria-hidden="true">
+                        {category.name.charAt(0)}
+                    </div>
+                )}
+            </div>
+            <div className="p-3 sm:p-4">
+                <h3 className="store-heading text-xl sm:text-2xl">{category.name}</h3>
+                <p className="font-store-body text-store-muted mt-0.5 text-sm">
+                    {category.products_count} {category.products_count === 1 ? 'producto' : 'productos'}
+                </p>
+            </div>
+        </a>
+    );
+}

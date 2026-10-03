@@ -35,6 +35,26 @@ export interface StoreCategory {
     slug: string;
 }
 
+export interface StoreBanner {
+    id: number;
+    image_url: string;
+    title: string | null;
+    link_url: string | null;
+}
+
+export interface CategoryCard extends StoreCategory {
+    products_count: number;
+    image_url: string | null;
+}
+
+export interface NewestProduct {
+    id: number;
+    name: string;
+    price: string;
+    image_url: string | null;
+    tag: 'sold-out' | 'backorder' | 'last-piece' | null;
+}
+
 export interface SharedData {
     name: string;
     store: Store;

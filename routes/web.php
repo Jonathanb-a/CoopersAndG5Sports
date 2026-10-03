@@ -1,11 +1,12 @@
 <?php
 
+use App\Http\Controllers\StoreHomeController;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware(ResolveStore::class)->group(function () {
-    Route::get('/', fn () => Inertia::render('home'))->name('home');
+    Route::get('/', StoreHomeController::class)->name('home');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -21,3 +21,20 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
         </motion.div>
     );
 }
+
+/** Igual que Reveal, pero espera a que el bloque entre en pantalla al hacer scroll (una sola vez). */
+export function ScrollReveal({ children, delay = 0, className }: RevealProps) {
+    const { motion: preset } = useTheme();
+
+    return (
+        <motion.div
+            className={className}
+            initial={preset.initial}
+            whileInView={preset.animate}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ ...preset.transition, delay }}
+        >
+            {children}
+        </motion.div>
+    );
+}

@@ -26,11 +26,19 @@ export interface Store {
     name: string;
     slug: string;
     theme: string | null;
+    whatsapp_phone: string | null;
+}
+
+export interface StoreCategory {
+    id: number;
+    name: string;
+    slug: string;
 }
 
 export interface SharedData {
     name: string;
     store: Store;
+    categories: StoreCategory[];
     quote: { message: string; author: string };
     auth: Auth;
     [key: string]: unknown;

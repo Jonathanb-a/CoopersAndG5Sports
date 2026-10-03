@@ -1,0 +1,80 @@
+/*
+ * Tokens de la tienda. Cada tema (resources/js/Themes/{theme}/theme.css) define los valores de
+ * las variables --store-* bajo [data-theme='{theme}']. Aquí se exponen como utilidades de Tailwind
+ * (bg-store-bg, text-store-muted, font-store-heading, rounded-store...) para que los componentes
+ * compartidos nunca lleven colores, tipografías ni radios escritos a mano.
+ */
+@theme inline {
+    --color-store-bg: var(--store-bg);
+    --color-store-surface: var(--store-surface);
+    --color-store-border: var(--store-border);
+    --color-store-text: var(--store-text);
+    --color-store-muted: var(--store-text-muted);
+
+    --color-store-accent: var(--store-accent);
+    --color-store-action: var(--store-action);
+    --color-store-action-hover: var(--store-action-hover);
+    --color-store-action-text: var(--store-action-contrast);
+    --color-store-link: var(--store-link);
+
+    --color-store-tag-soldout: var(--store-tag-soldout);
+    --color-store-tag-soldout-text: var(--store-tag-soldout-text);
+    --color-store-tag-backorder: var(--store-tag-backorder);
+    --color-store-tag-backorder-text: var(--store-tag-backorder-text);
+    --color-store-tag-last: var(--store-tag-last);
+    --color-store-tag-last-text: var(--store-tag-last-text);
+
+    --font-store-heading: var(--store-font-heading);
+    --font-store-body: var(--store-font-body);
+
+    --radius-store: var(--store-radius);
+    --radius-store-lg: var(--store-radius-lg);
+}
+
+/* Estilo de los títulos: tipografía, mayúsculas, peso e interletraje salen del tema. */
+@utility store-heading {
+    font-family: var(--store-font-heading);
+    font-weight: var(--store-heading-weight);
+    text-transform: var(--store-heading-transform);
+    letter-spacing: var(--store-heading-tracking);
+    line-height: var(--store-heading-leading);
+}
+
+/* Borde, sombra y transición propios del tema para botones, tarjetas y superficies. */
+@utility store-surface {
+    background-color: var(--store-surface);
+    border: var(--store-border-width) solid var(--store-border);
+    border-radius: var(--store-radius);
+    box-shadow: var(--store-shadow);
+}
+
+@utility store-transition {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: var(--store-duration);
+    transition-timing-function: var(--store-ease);
+}
+
+/* Etiquetas: inclinación tipo calcomanía en G5, rectas en Copper's. */
+@utility store-tag-shape {
+    transform: var(--store-tag-transform);
+}
+
+/* Movimiento al pasar el cursor / enfocar (la tarjeta y el botón lo toman del tema). */
+@utility store-lift {
+    &:hover,
+    &:focus-visible {
+        transform: var(--store-hover-transform);
+        box-shadow: var(--store-hover-shadow);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme] *,
+    [data-theme] *::before,
+    [data-theme] *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

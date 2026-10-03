@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Category;
 use App\Models\Store;
 use Closure;
 use Illuminate\Http\Request;
@@ -28,7 +29,15 @@ class ResolveStore
             'name' => $store->name,
             'slug' => $store->slug,
             'theme' => $store->theme,
+            'whatsapp_phone' => $store->whatsapp_phone,
         ]);
+
+        // Menú de categorías: solo las que tienen al menos un producto activo (y sin borrar).
+        Inertia::share('categories', fn () => Category::query()
+            ->where('categories.store_id', $store->id)
+            ->whereHas('products', fn ($query) => $query->where('is_active', true))
+            ->orderBy('name')
+            ->get(['categories.id', 'categories.name', 'categories.slug']));
 
         return $next($request);
     }

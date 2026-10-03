@@ -20,8 +20,8 @@ class StoreResolutionTest extends TestCase
         $this->withoutVite();
 
         $stores = [
-            ['slug' => 'coppers', 'name' => "Copper's", 'domain' => 'coppers.localhost', 'products' => ['Camisa Oxford', 'Pantalón Chino']],
-            ['slug' => 'g5', 'name' => 'Sports G5', 'domain' => 'g5.localhost', 'products' => ['Nike Mercurial Vapor']],
+            ['slug' => 'coppers', 'name' => "Copper's", 'domain' => 'coppers.localhost', 'category' => 'Camisas', 'whatsapp' => '5512345678', 'products' => ['Camisa Oxford', 'Pantalón Chino']],
+            ['slug' => 'g5', 'name' => 'Sports G5', 'domain' => 'g5.localhost', 'category' => 'Calzado', 'whatsapp' => null, 'products' => ['Nike Mercurial Vapor']],
         ];
 
         foreach ($stores as $data) {
@@ -30,12 +30,13 @@ class StoreResolutionTest extends TestCase
                 'slug' => $data['slug'],
                 'domain' => $data['domain'],
                 'theme' => $data['slug'],
+                'whatsapp_phone' => $data['whatsapp'],
             ]);
 
             $category = Category::create([
                 'store_id' => $store->id,
-                'name' => 'General',
-                'slug' => 'general',
+                'name' => $data['category'],
+                'slug' => str($data['category'])->slug(),
                 'size_type' => 'unica',
             ]);
 
@@ -51,7 +52,7 @@ class StoreResolutionTest extends TestCase
         }
     }
 
-    public function test_coppers_domain_shows_only_coppers_products()
+    public function test_coppers_domain_shares_its_own_store_theme_and_categories()
     {
         $this->get('http://coppers.localhost/')
             ->assertOk()
@@ -59,12 +60,14 @@ class StoreResolutionTest extends TestCase
                 ->component('home')
                 ->where('store.slug', 'coppers')
                 ->where('store.name', "Copper's")
-                ->has('products', 2)
-                ->where('products.0.name', 'Camisa Oxford')
-                ->where('products.1.name', 'Pantalón Chino'));
+                ->where('store.theme', 'coppers')
+                ->where('store.whatsapp_phone', '5512345678')
+                ->has('categories', 1)
+                ->where('categories.0.name', 'Camisas')
+                ->missing('products'));
     }
 
-    public function test_g5_domain_shows_only_g5_products()
+    public function test_g5_domain_shares_its_own_store_theme_and_categories()
     {
         $this->get('http://g5.localhost/')
             ->assertOk()
@@ -72,8 +75,26 @@ class StoreResolutionTest extends TestCase
                 ->component('home')
                 ->where('store.slug', 'g5')
                 ->where('store.theme', 'g5')
-                ->has('products', 1)
-                ->where('products.0.name', 'Nike Mercurial Vapor'));
+                ->where('store.whatsapp_phone', null)
+                ->has('categories', 1)
+                ->where('categories.0.name', 'Calzado'));
+    }
+
+    public function test_the_category_menu_only_lists_categories_with_active_products()
+    {
+        $g5 = Store::where('slug', 'g5')->first();
+
+        $empty = Category::create(['store_id' => $g5->id, 'name' => 'Vacía', 'slug' => 'vacia', 'size_type' => 'unica']);
+        $inactive = Category::create(['store_id' => $g5->id, 'name' => 'Inactiva', 'slug' => 'inactiva', 'size_type' => 'unica']);
+        Product::create(['store_id' => $g5->id, 'category_id' => $inactive->id, 'name' => 'Oculto', 'slug' => 'oculto', 'price' => 10, 'is_active' => false]);
+        $trashed = Category::create(['store_id' => $g5->id, 'name' => 'Borrada', 'slug' => 'borrada', 'size_type' => 'unica']);
+        Product::create(['store_id' => $g5->id, 'category_id' => $trashed->id, 'name' => 'Eliminado', 'slug' => 'eliminado', 'price' => 10])->delete();
+
+        $this->get('http://g5.localhost/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('categories', 1)
+                ->where('categories.0.name', 'Calzado'));
     }
 
     public function test_the_port_is_ignored_when_resolving_the_store()

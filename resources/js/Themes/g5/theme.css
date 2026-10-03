@@ -1,0 +1,59 @@
+/*
+ * Tema Sports G5: cancha y calle, energía, grafiti. Paleta y tipografías de CLAUDE.md.
+ * Contraste AA: texto negro sobre turquesa 13.6:1, blanco sobre morado 5.3:1, negro sobre amarillo 13.7:1.
+ * El morado (#A32CE0) sobre el fondo oscuro da 3.7:1, así que nunca se usa como color de texto.
+ */
+[data-theme='g5'] {
+    --store-bg: #0e0e10;
+    --store-surface: #1a1a1f;
+    --store-border: #2a2a31;
+    --store-text: #f5f5f5;
+    --store-text-muted: #a3a3ad;
+
+    --store-accent: #35f0ee;
+    --store-action: #35f0ee;
+    --store-action-hover: #ffd600;
+    --store-action-contrast: #0e0e10;
+    --store-link: #35f0ee;
+
+    --store-purple: #a32ce0;
+    --store-yellow: #ffd600;
+
+    /* Etiquetas tipo calcomanía: morado y amarillo. */
+    --store-tag-soldout: #2a2a31;
+    --store-tag-soldout-text: #f5f5f5;
+    --store-tag-backorder: #a32ce0;
+    --store-tag-backorder-text: #ffffff;
+    --store-tag-last: #ffd600;
+    --store-tag-last-text: #0e0e10;
+
+    --store-font-heading: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+    --store-font-body: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+    --store-heading-weight: 400;
+    --store-heading-transform: uppercase;
+    --store-heading-tracking: 0.03em;
+    --store-heading-leading: 1;
+
+    /* Esquinas marcadas (rectas), bordes gruesos y sombra dura. */
+    --store-radius: 0px;
+    --store-radius-lg: 0px;
+    --store-border-width: 2px;
+    --store-shadow: 4px 4px 0 0 var(--store-purple);
+    --store-tag-transform: rotate(-3deg);
+
+    /* Animaciones más marcadas: rápidas y con efecto al pasar el cursor. */
+    --store-duration: 0.18s;
+    --store-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --store-hover-transform: translate(-3px, -3px);
+    --store-hover-shadow: 7px 7px 0 0 var(--store-yellow);
+
+    color-scheme: dark;
+}
+
+/* Manchas de pintura como fondo de secciones. */
+[data-theme='g5'] .store-paint {
+    background-image:
+        radial-gradient(40% 55% at 12% 20%, rgb(163 44 224 / 0.35), transparent 70%),
+        radial-gradient(35% 45% at 88% 15%, rgb(53 240 238 / 0.22), transparent 70%),
+        radial-gradient(30% 40% at 70% 95%, rgb(255 214 0 / 0.16), transparent 70%);
+}

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './store.css';
 
 @plugin 'tailwindcss-animate';
 

@@ -1,0 +1,50 @@
+/*
+ * Tema Copper's: boutique, producto original, limpio y caro.
+ * Paleta y tipografías de CLAUDE.md. Contraste mínimo AA:
+ *   - #B8692A (cobre) con texto blanco da 4.12:1, por debajo de AA para texto normal. Se usa solo en
+ *     detalles sin texto (líneas, íconos, foco). Botones y enlaces usan #9C5620 (5.58:1 con blanco,
+ *     5.22:1 sobre el fondo) y su hover va un tono más oscuro (#7F4518, 7.59:1).
+ */
+[data-theme='coppers'] {
+    --store-bg: #faf7f2;
+    --store-surface: #ffffff;
+    --store-border: #e8e2d9;
+    --store-text: #1c1c1c;
+    --store-text-muted: #6b6560;
+
+    --store-accent: #b8692a;
+    --store-action: #9c5620;
+    --store-action-hover: #7f4518;
+    --store-action-contrast: #ffffff;
+    --store-link: #9c5620;
+
+    /* Etiquetas chicas: el rosa #F08A8A solo aquí. */
+    --store-tag-soldout: #1c1c1c;
+    --store-tag-soldout-text: #faf7f2;
+    --store-tag-backorder: #ffffff;
+    --store-tag-backorder-text: #1c1c1c;
+    --store-tag-last: #f08a8a;
+    --store-tag-last-text: #1c1c1c;
+
+    --store-font-heading: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+    --store-font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --store-heading-weight: 500;
+    --store-heading-transform: none;
+    --store-heading-tracking: 0.01em;
+    --store-heading-leading: 1.1;
+
+    /* Esquinas casi rectas, líneas finas, sin sombras. */
+    --store-radius: 2px;
+    --store-radius-lg: 4px;
+    --store-border-width: 1px;
+    --store-shadow: none;
+    --store-tag-transform: none;
+
+    /* Animaciones sutiles: suaves y sin rebote. */
+    --store-duration: 0.45s;
+    --store-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --store-hover-transform: translateY(-2px);
+    --store-hover-shadow: none;
+
+    color-scheme: light;
+}

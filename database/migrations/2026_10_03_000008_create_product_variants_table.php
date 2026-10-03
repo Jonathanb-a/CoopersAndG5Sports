@@ -13,8 +13,9 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->string('size');
             $table->string('sku')->nullable();
-            $table->integer('stock')->default(0);
+            $table->unsignedInteger('stock')->default(0);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['product_id', 'size']);
         });

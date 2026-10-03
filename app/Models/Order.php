@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    use BelongsToStore;
+
     protected $fillable = [
         'store_id',
         'customer_id',

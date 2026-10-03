@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Middleware\ResolveStore;
+use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+Route::middleware(ResolveStore::class)->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('home', [
+            'products' => Product::query()->orderBy('name')->get(['id', 'name', 'price']),
+        ]);
+    })->name('home');
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', function () {

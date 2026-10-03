@@ -21,8 +21,16 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface Store {
+    id: number;
+    name: string;
+    slug: string;
+    theme: string | null;
+}
+
 export interface SharedData {
     name: string;
+    store: Store;
     quote: { message: string; author: string };
     auth: Auth;
     [key: string]: unknown;

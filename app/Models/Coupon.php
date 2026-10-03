@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Enums\CouponType;
+use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Coupon extends Model
 {
+    use BelongsToStore;
+
     protected $fillable = [
         'store_id',
         'code',

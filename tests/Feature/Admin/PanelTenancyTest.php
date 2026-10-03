@@ -164,7 +164,11 @@ class PanelTenancyTest extends TestCase
         $this->get('/admin/g5')->assertOk();
 
         $this->assertFalse(app()->bound('currentStore'));
-        $this->assertSame(2, Product::count());
+
+        // El scope de tenant de Filament sigue activo tras la petición en pruebas; se quita para
+        // comprobar que BelongsToStore (scope "store") no filtra nada dentro del panel.
+        $filamentScope = Filament::getPanel('admin')->getTenancyScopeName();
+        $this->assertSame(2, Product::withoutGlobalScope($filamentScope)->count());
     }
 
     /** @return list<string> */

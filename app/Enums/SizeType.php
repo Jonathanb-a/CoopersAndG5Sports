@@ -2,10 +2,22 @@
 
 namespace App\Enums;
 
-enum SizeType: string
+use Filament\Support\Contracts\HasLabel;
+
+enum SizeType: string implements HasLabel
 {
     case Footwear = 'calzado';
     case Clothing = 'ropa';
     case Kids = 'kids';
     case OneSize = 'unica';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Footwear => 'Calzado',
+            self::Clothing => 'Ropa',
+            self::Kids => 'Kids',
+            self::OneSize => 'Talla única',
+        };
+    }
 }

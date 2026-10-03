@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Tables;
 
+use App\Enums\StockLevel;
 use App\Models\Product;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,7 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -46,7 +48,9 @@ class ProductsTable
                 TextColumn::make('variants_sum_stock')
                     ->label('Stock total')
                     ->sum('variants', 'stock')
-                    ->placeholder('0')
+                    ->default(0)
+                    ->badge()
+                    ->color(fn ($state): string => StockLevel::forProduct((int) $state)->getColor())
                     ->sortable(),
                 IconColumn::make('is_active')
                     ->label('Activo')
@@ -60,6 +64,14 @@ class ProductsTable
                 SelectFilter::make('brand')
                     ->label('Marca')
                     ->relationship('brand', 'name'),
+                Filter::make('sold_out')
+                    ->label('Agotados')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->soldOut()),
+                Filter::make('last_piece')
+                    ->label('Última pieza')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->lastPiece()),
                 TernaryFilter::make('is_active')
                     ->label('Activo'),
                 TrashedFilter::make()

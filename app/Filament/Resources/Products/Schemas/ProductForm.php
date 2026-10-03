@@ -2,8 +2,15 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use App\Enums\StockLevel;
+use App\Enums\StockMovementType;
 use App\Enums\UserRole;
+use App\Exceptions\InsufficientStockException;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Services\StockService;
+use Closure;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -11,10 +18,13 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
@@ -101,16 +111,18 @@ class ProductForm
 
                 Section::make('Tallas')
                     ->columnSpanFull()
-                    ->description('El stock se captura solo al crear el producto. Después se ajusta con movimientos de inventario.')
+                    ->description('El stock inicial se captura solo al crear el producto y se registra como una entrada. Después se cambia con la acción «Ajustar stock» de cada talla.')
                     ->schema([
                         Repeater::make('variants')
                             ->hiddenLabel()
                             ->relationship()
-                            ->columns(3)
+                            ->columns(4)
                             ->minItems(1)
                             ->defaultItems(1)
                             ->addActionLabel('Agregar talla')
                             ->deletable(fn (string $operation): bool => $operation === 'create')
+                            ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [...$data, 'stock' => 0])
+                            ->extraItemActions([self::adjustStockAction()])
                             ->itemLabel(fn (array $state): ?string => $state['size'] ?? null)
                             ->schema([
                                 TextInput::make('size')
@@ -128,6 +140,10 @@ class ProductForm
                                     ->minValue(0)
                                     ->default(0)
                                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
+                                Text::make(fn (Get $get): string => StockLevel::forVariant((int) $get('stock'))->getLabel())
+                                    ->badge()
+                                    ->color(fn (Get $get): string => StockLevel::forVariant((int) $get('stock'))->getColor())
+                                    ->visible(fn (string $operation): bool => $operation === 'edit'),
                             ]),
                     ]),
 
@@ -159,6 +175,79 @@ class ProductForm
                             }),
                     ]),
             ]);
+    }
+
+    private static function adjustStockAction(): Action
+    {
+        return Action::make('adjustStock')
+            ->label('Ajustar stock')
+            ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
+            ->iconButton()
+            ->visible(fn (array $arguments, Repeater $component): bool => self::variantFor($component, $arguments) !== null)
+            ->modalHeading(fn (array $arguments, Repeater $component): string => 'Ajustar stock · talla '.self::variantFor($component, $arguments)?->size)
+            ->modalSubmitActionLabel('Guardar')
+            ->schema([
+                Select::make('type')
+                    ->label('Tipo')
+                    ->options([
+                        StockMovementType::Entry->value => StockMovementType::Entry->getLabel(),
+                        StockMovementType::Adjustment->value => StockMovementType::Adjustment->getLabel(),
+                    ])
+                    ->default(StockMovementType::Entry->value)
+                    ->required()
+                    ->live(),
+                TextInput::make('quantity')
+                    ->label('Cantidad')
+                    ->helperText('En un ajuste usa un número negativo para descontar piezas.')
+                    ->numeric()
+                    ->integer()
+                    ->required()
+                    ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                        if ((int) $value === 0) {
+                            $fail('La cantidad no puede ser cero.');
+                        } elseif ($get('type') === StockMovementType::Entry->value && (int) $value < 0) {
+                            $fail('En una entrada la cantidad debe ser positiva.');
+                        }
+                    }),
+                Textarea::make('notes')
+                    ->label('Notas')
+                    ->rows(3),
+            ])
+            ->action(function (array $data, array $arguments, Repeater $component, Action $action, $livewire): void {
+                $variant = self::variantFor($component, $arguments);
+
+                try {
+                    app(StockService::class)->change(
+                        $variant,
+                        StockMovementType::from($data['type']),
+                        (int) $data['quantity'],
+                        auth()->user(),
+                        $data['notes'] ?? null,
+                    );
+                } catch (InsufficientStockException $exception) {
+                    Notification::make()
+                        ->danger()
+                        ->title('No se pudo ajustar el stock')
+                        ->body($exception->getMessage())
+                        ->send();
+
+                    $action->halt();
+                }
+
+                data_set($livewire->data, "variants.{$arguments['item']}.stock", $variant->stock);
+
+                Notification::make()
+                    ->success()
+                    ->title('Stock actualizado')
+                    ->send();
+            });
+    }
+
+    private static function variantFor(Repeater $component, array $arguments): ?ProductVariant
+    {
+        $key = $arguments['item'] ?? null;
+
+        return $key === null ? null : $component->getCachedExistingRecords()->get($key);
     }
 
     private static function fillSlug(Get $get, Set $set, string $operation): void

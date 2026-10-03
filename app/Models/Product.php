@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToStore;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -51,6 +52,26 @@ class Product extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    /** Productos sin ninguna pieza (suma de stock de sus tallas = 0). */
+    public function scopeSoldOut(Builder $query): Builder
+    {
+        return $this->whereTotalStock($query, 0);
+    }
+
+    /** Productos con exactamente una pieza en total. */
+    public function scopeLastPiece(Builder $query): Builder
+    {
+        return $this->whereTotalStock($query, 1);
+    }
+
+    private function whereTotalStock(Builder $query, int $total): Builder
+    {
+        return $query->whereRaw(
+            "(select coalesce(sum(stock), 0) from product_variants where product_variants.product_id = {$this->getTable()}.id and product_variants.deleted_at is null) = ?",
+            [$total],
+        );
     }
 
     public function variants(): HasMany

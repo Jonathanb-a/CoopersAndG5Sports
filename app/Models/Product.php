@@ -66,10 +66,16 @@ class Product extends Model
         return $this->whereTotalStock($query, 1);
     }
 
-    private function whereTotalStock(Builder $query, int $total): Builder
+    /** Productos en rojo o amarillo del semáforo: 2 piezas o menos en total (ver StockLevel::forProduct). */
+    public function scopeNeedsRestock(Builder $query): Builder
+    {
+        return $this->whereTotalStock($query, 2, '<=');
+    }
+
+    private function whereTotalStock(Builder $query, int $total, string $operator = '='): Builder
     {
         return $query->whereRaw(
-            "(select coalesce(sum(stock), 0) from product_variants where product_variants.product_id = {$this->getTable()}.id and product_variants.deleted_at is null) = ?",
+            "(select coalesce(sum(stock), 0) from product_variants where product_variants.product_id = {$this->getTable()}.id and product_variants.deleted_at is null) {$operator} ?",
             [$total],
         );
     }

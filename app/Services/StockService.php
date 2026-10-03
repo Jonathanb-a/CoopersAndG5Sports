@@ -3,10 +3,16 @@
 namespace App\Services;
 
 use App\Enums\StockMovementType;
+use App\Enums\UserRole;
 use App\Exceptions\InsufficientStockException;
+use App\Filament\Resources\Products\ProductResource;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
+use App\Models\Store;
 use App\Models\User;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -53,6 +59,49 @@ class StockService
 
         $variant->refresh();
 
+        // Solo se llega a 0 desde un stock positivo (la cantidad nunca es cero).
+        if ($variant->stock === 0) {
+            $this->notifySoldOut($variant);
+        }
+
         return $movement;
+    }
+
+    /**
+     * Avisa en la campana del panel a los usuarios de la tienda (los de store_user y los
+     * owner, que ven todas las tiendas) que una talla se agotó, y si con ella se agotó todo
+     * el producto.
+     */
+    private function notifySoldOut(ProductVariant $variant): void
+    {
+        // Sin scopes: debe funcionar aunque el producto esté en la papelera o no haya tienda actual.
+        $product = Product::withoutGlobalScopes()->findOrFail($variant->product_id);
+        $store = Store::findOrFail($product->store_id);
+
+        $productSoldOut = ! ProductVariant::query()->where('product_id', $product->id)->where('stock', '>', 0)->exists();
+
+        $recipients = User::query()
+            ->where('role', UserRole::Owner->value)
+            ->orWhereHas('stores', fn ($query) => $query->whereKey($store->id))
+            ->get();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->icon('heroicon-o-exclamation-triangle')
+            ->title($productSoldOut ? 'Producto agotado' : 'Talla agotada')
+            ->body($productSoldOut
+                ? "Con la talla {$variant->size} se agotó todo el producto «{$product->name}» en {$store->name}: ya no quedan piezas en ninguna talla."
+                : "La talla {$variant->size} de «{$product->name}» en {$store->name} se quedó sin piezas.")
+            ->actions([
+                Action::make('view')
+                    ->label('Ver producto')
+                    ->button()
+                    ->url(ProductResource::getUrl('edit', ['record' => $product], panel: 'admin', tenant: $store)),
+            ])
+            ->sendToDatabase($recipients);
     }
 }

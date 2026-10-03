@@ -2,8 +2,18 @@
 
 namespace App\Enums;
 
-enum UserRole: string
+use Filament\Support\Contracts\HasLabel;
+
+enum UserRole: string implements HasLabel
 {
     case Owner = 'owner';
     case Staff = 'staff';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Owner => 'Propietario',
+            self::Staff => 'Personal',
+        };
+    }
 }

@@ -6,14 +6,17 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasTenants
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -57,6 +60,23 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return in_array($this->role, [UserRole::Owner, UserRole::Staff], true);
+    }
+
+    public function getTenants(Panel $panel): Collection
+    {
+        $stores = $this->role === UserRole::Owner ? Store::query() : $this->stores();
+
+        return $stores->where('is_active', true)->get();
+    }
+
+    public function canAccessTenant(Model $tenant): bool
+    {
+        if (! $tenant instanceof Store || ! $tenant->is_active) {
+            return false;
+        }
+
+        return $this->role === UserRole::Owner
+            || $this->stores()->whereKey($tenant->getKey())->exists();
     }
 
     public function stores(): BelongsToMany

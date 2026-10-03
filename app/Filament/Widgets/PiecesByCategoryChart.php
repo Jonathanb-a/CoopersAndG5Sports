@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class PiecesByCategoryChart extends ChartWidget
 {
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 9;
 
     protected ?string $heading = 'Piezas por categoría';
 

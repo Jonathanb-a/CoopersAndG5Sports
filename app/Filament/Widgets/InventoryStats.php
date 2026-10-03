@@ -11,7 +11,7 @@ use Illuminate\Support\Number;
 
 class InventoryStats extends StatsOverviewWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 8;
 
     protected function getStats(): array
     {

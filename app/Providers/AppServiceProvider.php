@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Order;
+use App\Observers\OrderObserver;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Support\Number;
@@ -22,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Order::observe(OrderObserver::class);
+
         // Pesos mexicanos ($1,700.00) en los helpers de Laravel.
         Number::useLocale('es_MX');
         Number::useCurrency('MXN');

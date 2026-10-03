@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\StockMovementType;
-use App\Enums\UserRole;
 use App\Exceptions\InsufficientStockException;
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\Product;
@@ -80,10 +79,7 @@ class StockService
 
         $productSoldOut = ! ProductVariant::query()->where('product_id', $product->id)->where('stock', '>', 0)->exists();
 
-        $recipients = User::query()
-            ->where('role', UserRole::Owner->value)
-            ->orWhereHas('stores', fn ($query) => $query->whereKey($store->id))
-            ->get();
+        $recipients = StoreUsers::toNotify($store);
 
         if ($recipients->isEmpty()) {
             return;

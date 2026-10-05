@@ -23,22 +23,19 @@ export default function G5Layout({ children }: { children: ReactNode }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [root, setRoot] = useState<HTMLDivElement | null>(null);
 
-    // El menú de categorías todavía no lleva a ninguna página: el catálogo llega en otra fase.
-    const categoryLink = (name: string, className: string, onClick?: () => void) => (
-        <a
-            href="#"
-            className={className}
-            onClick={(event) => {
-                event.preventDefault();
-                onClick?.();
-            }}
-        >
-            {name}
-        </a>
+    // Catálogo completo y una página por categoría.
+    const navLinks = [
+        { id: 'catalogo', name: 'Catálogo', href: '/catalogo' },
+        ...categories.map((category) => ({ id: category.id, name: category.name, href: `/categoria/${category.slug}` })),
+    ];
+    const navLink = (item: (typeof navLinks)[number], className: string, onClick?: () => void) => (
+        <Link href={item.href} className={className} onClick={onClick}>
+            {item.name}
+        </Link>
     );
 
     return (
-        <ThemeContext.Provider value={{ name: 'g5', motion }}>
+        <ThemeContext.Provider value={{ name: 'g5', motion, root }}>
             <MotionConfig reducedMotion="user">
                 <Head>
                     <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -68,20 +65,18 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                                 <StoreLogo theme={store.theme} name={store.name} textClassName="text-2xl text-store-accent lg:text-4xl" />
                             </Link>
 
-                            {categories.length > 0 && (
-                                <nav aria-label="Categorías" className="hidden flex-1 lg:block">
-                                    <ul className="flex flex-wrap gap-x-5 gap-y-0.5">
-                                        {categories.map((category) => (
-                                            <li key={category.id}>
-                                                {categoryLink(
-                                                    category.name,
-                                                    'store-heading inline-block text-lg text-store-text transition-transform duration-150 hover:-skew-x-6 hover:text-store-link',
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </nav>
-                            )}
+                            <nav aria-label="Categorías" className="hidden flex-1 lg:block">
+                                <ul className="flex flex-wrap gap-x-5 gap-y-0.5">
+                                    {navLinks.map((item) => (
+                                        <li key={item.id}>
+                                            {navLink(
+                                                item,
+                                                'store-heading inline-block text-lg text-store-text transition-transform duration-150 hover:-skew-x-6 hover:text-store-link',
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </nav>
 
                             <SearchField className="hidden w-48 lg:flex xl:w-60" />
 
@@ -101,10 +96,10 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                         <p className="store-heading text-store-accent mt-2 text-4xl">{store.name}</p>
                         <nav aria-label="Categorías" className="mt-8 flex-1 overflow-y-auto">
                             <ul className="flex flex-col gap-1">
-                                {categories.map((category) => (
-                                    <li key={category.id}>
-                                        {categoryLink(
-                                            category.name,
+                                {navLinks.map((item) => (
+                                    <li key={item.id}>
+                                        {navLink(
+                                            item,
                                             'store-heading block border-l-4 border-store-border py-3 pl-4 text-2xl hover:border-store-accent hover:text-store-link',
                                             () => setMenuOpen(false),
                                         )}

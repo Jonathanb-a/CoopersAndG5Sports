@@ -8,6 +8,7 @@
     --color-store-bg: var(--store-bg);
     --color-store-surface: var(--store-surface);
     --color-store-border: var(--store-border);
+    --color-store-photo: var(--store-photo-bg);
     --color-store-text: var(--store-text);
     --color-store-muted: var(--store-text-muted);
 

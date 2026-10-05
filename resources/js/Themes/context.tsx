@@ -10,6 +10,8 @@ export interface ThemeMotion {
 interface ThemeContextValue {
     name: string;
     motion: ThemeMotion;
+    /** Elemento raíz del tema: los paneles que se montan fuera del layout (Radix) lo usan para heredar las variables CSS. */
+    root: HTMLElement | null;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);

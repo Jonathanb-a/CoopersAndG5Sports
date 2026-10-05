@@ -9,6 +9,8 @@
     --store-bg: #faf7f2;
     --store-surface: #ffffff;
     --store-border: #e8e2d9;
+    /* Las fotos de producto vienen sobre fondo blanco: el recuadro de la foto se queda blanco en ambos temas. */
+    --store-photo-bg: #ffffff;
     --store-text: #1c1c1c;
     --store-text-muted: #6b6560;
 

@@ -5,13 +5,13 @@ import { ProductCard } from '@/components/store/product-card';
 import { Reveal, ScrollReveal } from '@/components/store/reveal';
 import { SectionHeading } from '@/components/store/section-heading';
 import StoreLayout from '@/Themes';
-import { type CategoryCard as CategoryCardData, type NewestProduct, type SharedData, type StoreBanner } from '@/types';
+import { type CategoryCard as CategoryCardData, type SharedData, type StoreBanner, type StoreProduct } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
 interface HomeProps {
     banners: StoreBanner[];
     categoryCards: CategoryCardData[];
-    newest: NewestProduct[];
+    newest: StoreProduct[];
     about: string | null;
 }
 
@@ -66,7 +66,13 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
                     <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
                         {newest.map((product, position) => (
                             <ScrollReveal key={product.id} delay={Math.min(position, 7) * 0.05}>
-                                <ProductCard name={product.name} price={product.price} imageUrl={product.image_url} tag={product.tag} />
+                                <ProductCard
+                                    name={product.name}
+                                    brand={product.brand}
+                                    price={product.price}
+                                    imageUrl={product.image_url}
+                                    tag={product.tag}
+                                />
                             </ScrollReveal>
                         ))}
                     </div>

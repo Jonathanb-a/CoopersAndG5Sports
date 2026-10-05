@@ -47,12 +47,41 @@ export interface CategoryCard extends StoreCategory {
     image_url: string | null;
 }
 
-export interface NewestProduct {
+export type ProductTagKind = 'sold-out' | 'backorder' | 'last-piece';
+
+/** Tarjeta de producto de la tienda (inicio y catálogo). */
+export interface StoreProduct {
     id: number;
     name: string;
+    brand: string | null;
     price: string;
     image_url: string | null;
-    tag: 'sold-out' | 'backorder' | 'last-piece' | null;
+    tag: ProductTagKind | null;
+}
+
+export interface CatalogFilters {
+    q: string;
+    marca: string[];
+    talla: string[];
+    disponibles: boolean;
+    orden: string;
+}
+
+export interface CatalogPagination {
+    current: number;
+    last: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    prev_url: string | null;
+    next_url: string | null;
+    /** null = puntos suspensivos */
+    items: ({ page: number; url: string } | null)[];
+}
+
+export interface CatalogOptions {
+    brands: { name: string; slug: string }[];
+    sizes: string[];
 }
 
 export interface SharedData {

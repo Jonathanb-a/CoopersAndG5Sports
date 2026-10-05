@@ -7,6 +7,7 @@ use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
+use App\Support\ProductCard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -85,32 +86,13 @@ class StoreHomeController extends Controller
         return Product::query()
             ->where('products.store_id', $store->id)
             ->where('products.is_active', true)
-            ->with('images')
+            ->with(['images', 'brand'])
             ->withSum('variants as total_stock', 'stock')
             ->latest('products.created_at')
             ->latest('products.id')
             ->limit(self::NEWEST_LIMIT)
             ->get()
-            ->map(fn (Product $product) => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'price' => $product->price,
-                'image_url' => ($path = $product->images->first()?->path) ? Storage::disk('public')->url($path) : null,
-                'tag' => $this->tag($product),
-            ])
+            ->map(fn (Product $product) => ProductCard::from($product))
             ->all();
-    }
-
-    /** "Agotado", "Sobre pedido" y "Última pieza" (ver CLAUDE.md). */
-    private function tag(Product $product): ?string
-    {
-        $stock = (int) $product->total_stock;
-
-        return match (true) {
-            $stock === 0 && $product->allow_backorder => 'backorder',
-            $stock === 0 => 'sold-out',
-            $stock === 1 => 'last-piece',
-            default => null,
-        };
     }
 }

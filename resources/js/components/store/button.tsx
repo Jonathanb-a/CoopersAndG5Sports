@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { type ComponentProps } from 'react';
 
-const buttonVariants = cva(
+export const buttonVariants = cva(
     [
         'store-transition store-lift inline-flex items-center justify-center gap-2 rounded-store font-store-body font-semibold',
         'border-[length:var(--store-border-width)] border-transparent',

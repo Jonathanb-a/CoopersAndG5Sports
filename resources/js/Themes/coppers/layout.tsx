@@ -23,22 +23,19 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [root, setRoot] = useState<HTMLDivElement | null>(null);
 
-    // El menú de categorías todavía no lleva a ninguna página: el catálogo llega en otra fase.
-    const categoryLink = (name: string, className: string, onClick?: () => void) => (
-        <a
-            href="#"
-            className={className}
-            onClick={(event) => {
-                event.preventDefault();
-                onClick?.();
-            }}
-        >
-            {name}
-        </a>
+    // Catálogo completo y una página por categoría.
+    const navLinks = [
+        { id: 'catalogo', name: 'Catálogo', href: '/catalogo' },
+        ...categories.map((category) => ({ id: category.id, name: category.name, href: `/categoria/${category.slug}` })),
+    ];
+    const navLink = (item: (typeof navLinks)[number], className: string, onClick?: () => void) => (
+        <Link href={item.href} className={className} onClick={onClick}>
+            {item.name}
+        </Link>
     );
 
     return (
-        <ThemeContext.Provider value={{ name: 'coppers', motion }}>
+        <ThemeContext.Provider value={{ name: 'coppers', motion, root }}>
             <MotionConfig reducedMotion="user">
                 <Head>
                     <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -90,31 +87,29 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                             </div>
                         )}
 
-                        {categories.length > 0 && (
-                            <nav aria-label="Categorías" className="border-store-border hidden border-t lg:block">
-                                <Container>
-                                    <ul className="flex flex-wrap justify-center gap-x-10 gap-y-2 py-4">
-                                        {categories.map((category) => (
-                                            <li key={category.id}>
-                                                {categoryLink(
-                                                    category.name,
-                                                    'text-xs font-medium tracking-[0.18em] text-store-text uppercase underline-offset-8 transition-colors hover:text-store-link hover:underline',
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </Container>
-                            </nav>
-                        )}
+                        <nav aria-label="Categorías" className="border-store-border hidden border-t lg:block">
+                            <Container>
+                                <ul className="flex flex-wrap justify-center gap-x-10 gap-y-2 py-4">
+                                    {navLinks.map((item) => (
+                                        <li key={item.id}>
+                                            {navLink(
+                                                item,
+                                                'text-xs font-medium tracking-[0.18em] text-store-text uppercase underline-offset-8 transition-colors hover:text-store-link hover:underline',
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </Container>
+                        </nav>
                     </header>
 
                     <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} container={root} title="Menú de categorías">
                         <p className="store-heading mt-2 text-3xl">{store.name}</p>
                         <nav aria-label="Categorías" className="mt-8 flex-1 overflow-y-auto">
                             <ul className="divide-store-border border-store-border divide-y border-y">
-                                {categories.map((category) => (
-                                    <li key={category.id}>
-                                        {categoryLink(category.name, 'block py-4 text-sm tracking-[0.16em] uppercase hover:text-store-link', () =>
+                                {navLinks.map((item) => (
+                                    <li key={item.id}>
+                                        {navLink(item, 'block py-4 text-sm tracking-[0.16em] uppercase hover:text-store-link', () =>
                                             setMenuOpen(false),
                                         )}
                                     </li>

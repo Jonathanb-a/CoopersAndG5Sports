@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\StoreHomeController;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,8 @@ use Inertia\Inertia;
 
 Route::middleware(ResolveStore::class)->group(function () {
     Route::get('/', StoreHomeController::class)->name('home');
+    Route::get('catalogo', CatalogController::class)->name('catalog');
+    Route::get('categoria/{slug}', CatalogController::class)->name('category');
 });
 
 Route::middleware(['auth'])->group(function () {

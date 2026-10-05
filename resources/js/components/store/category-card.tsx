@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { type CategoryCard as CategoryCardData } from '@/types';
+import { Link } from '@inertiajs/react';
 
 interface CategoryCardProps {
     category: CategoryCardData;
@@ -9,10 +10,8 @@ interface CategoryCardProps {
 /** Acceso a una categoría: foto de uno de sus productos, nombre y cuántos productos tiene. */
 export function CategoryCard({ category, className }: CategoryCardProps) {
     return (
-        // Las páginas de categoría llegan con el catálogo; por ahora el acceso no navega.
-        <a
-            href="#"
-            onClick={(event) => event.preventDefault()}
+        <Link
+            href={`/categoria/${category.slug}`}
             className={cn(
                 'group store-surface store-transition store-lift focus-visible:outline-store-accent block overflow-hidden focus-visible:outline-2',
                 className,
@@ -33,6 +32,6 @@ export function CategoryCard({ category, className }: CategoryCardProps) {
                     {category.products_count} {category.products_count === 1 ? 'producto' : 'productos'}
                 </p>
             </div>
-        </a>
+        </Link>
     );
 }

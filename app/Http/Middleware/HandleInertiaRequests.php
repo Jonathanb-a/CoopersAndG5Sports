@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\Auth\GoogleAuthController;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -42,9 +43,13 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
+            // Solo el cliente de la tienda. El personal del panel (/admin) no usa Inertia.
             'auth' => [
-                'user' => $request->user(),
+                'customer' => fn () => ($customer = $request->user('customer'))
+                    ? ['id' => $customer->id, 'name' => $customer->name, 'email' => $customer->email]
+                    : null,
             ],
+            'googleEnabled' => fn () => GoogleAuthController::enabled(),
         ]);
     }
 }

@@ -1,119 +1,88 @@
-import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
-
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
-
-interface RegisterForm {
-    name: string;
-    email: string;
-    password: string;
-    password_confirmation: string;
-}
+import { AuthCard } from '@/components/store/auth-card';
+import { StoreButton } from '@/components/store/button';
+import { Field } from '@/components/store/form';
+import { GoogleButton } from '@/components/store/google-button';
+import StoreLayout from '@/Themes';
+import { type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { type FormEvent } from 'react';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm<RegisterForm>({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-    });
+    const { store } = usePage<SharedData>().props;
+    const form = useForm({ name: '', email: '', password: '', password_confirmation: '' });
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.post('/register', { onFinish: () => form.reset('password', 'password_confirmation') });
     };
 
     return (
-        <AuthLayout title="Crea una cuenta" description="Ingresa tus datos para crear tu cuenta">
-            <Head title="Registro" />
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input
-                            id="name"
-                            type="text"
-                            required
-                            autoFocus
-                            tabIndex={1}
-                            autoComplete="name"
-                            value={data.name}
-                            onChange={(e) => setData('name', e.target.value)}
-                            disabled={processing}
-                            placeholder="Nombre completo"
-                        />
-                        <InputError message={errors.name} className="mt-2" />
-                    </div>
+        <StoreLayout>
+            <Head title={`Crear cuenta · ${store.name}`} />
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Correo electrónico</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            required
-                            tabIndex={2}
-                            autoComplete="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            disabled={processing}
-                            placeholder="correo@ejemplo.com"
-                        />
-                        <InputError message={errors.email} />
-                    </div>
+            <AuthCard
+                title="Crear cuenta"
+                description="Con una sola cuenta compras en Copper's y en Sports G5."
+                footer={
+                    <>
+                        ¿Ya tienes cuenta?{' '}
+                        <Link href="/login" className="text-store-link font-semibold underline underline-offset-4">
+                            Ingresar
+                        </Link>
+                    </>
+                }
+            >
+                <GoogleButton />
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            tabIndex={3}
-                            autoComplete="new-password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            disabled={processing}
-                            placeholder="Contraseña"
-                        />
-                        <InputError message={errors.password} />
-                    </div>
+                <form onSubmit={submit} className="space-y-4" noValidate>
+                    <Field
+                        label="Nombre"
+                        name="name"
+                        autoComplete="name"
+                        autoFocus
+                        required
+                        value={form.data.name}
+                        onChange={(event) => form.setData('name', event.target.value)}
+                        error={form.errors.name}
+                    />
+                    <Field
+                        label="Correo electrónico"
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        inputMode="email"
+                        required
+                        value={form.data.email}
+                        onChange={(event) => form.setData('email', event.target.value)}
+                        error={form.errors.email}
+                    />
+                    <Field
+                        label="Contraseña"
+                        type="password"
+                        name="password"
+                        autoComplete="new-password"
+                        required
+                        hint="Mínimo 8 caracteres."
+                        value={form.data.password}
+                        onChange={(event) => form.setData('password', event.target.value)}
+                        error={form.errors.password}
+                    />
+                    <Field
+                        label="Confirmar contraseña"
+                        type="password"
+                        name="password_confirmation"
+                        autoComplete="new-password"
+                        required
+                        value={form.data.password_confirmation}
+                        onChange={(event) => form.setData('password_confirmation', event.target.value)}
+                        error={form.errors.password_confirmation}
+                    />
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password_confirmation">Confirmar contraseña</Label>
-                        <Input
-                            id="password_confirmation"
-                            type="password"
-                            required
-                            tabIndex={4}
-                            autoComplete="new-password"
-                            value={data.password_confirmation}
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
-                            disabled={processing}
-                            placeholder="Confirmar contraseña"
-                        />
-                        <InputError message={errors.password_confirmation} />
-                    </div>
-
-                    <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Crear cuenta
-                    </Button>
-                </div>
-
-                <div className="text-muted-foreground text-center text-sm">
-                    ¿Ya tienes una cuenta?{' '}
-                    <TextLink href={route('login')} tabIndex={6}>
-                        Iniciar sesión
-                    </TextLink>
-                </div>
-            </form>
-        </AuthLayout>
+                    <StoreButton type="submit" size="lg" className="w-full" disabled={form.processing}>
+                        {form.processing ? 'Creando cuenta…' : 'Crear cuenta'}
+                    </StoreButton>
+                </form>
+            </AuthCard>
+        </StoreLayout>
     );
 }

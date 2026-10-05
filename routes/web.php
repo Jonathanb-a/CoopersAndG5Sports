@@ -1,24 +1,51 @@
 <?php
 
+use App\Http\Controllers\Account\AccountController;
+use App\Http\Controllers\Account\AddressController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreHomeController;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware(ResolveStore::class)->group(function () {
     Route::get('/', StoreHomeController::class)->name('home');
     Route::get('catalogo', CatalogController::class)->name('catalog');
     Route::get('categoria/{slug}', CatalogController::class)->name('category');
     Route::get('producto/{slug}', ProductController::class)->name('product');
-});
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
-});
+    // Cuentas de clientes (guard "customer"). La sesión es por dominio: se inicia en cada tienda.
+    Route::middleware('guest:customer')->group(function () {
+        Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
+        Route::post('register', [RegisteredUserController::class, 'store']);
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+        Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
+        Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+        Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+        Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+
+        Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+        Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.store');
+
+        Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('google.redirect');
+        Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
+    });
+
+    Route::middleware('auth:customer')->group(function () {
+        Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+        Route::get('mi-cuenta', [AccountController::class, 'show'])->name('account.show');
+        Route::patch('mi-cuenta', [AccountController::class, 'update'])->name('account.update');
+        Route::put('mi-cuenta/contrasena', [AccountController::class, 'updatePassword'])->name('account.password');
+
+        Route::post('mi-cuenta/direcciones', [AddressController::class, 'store'])->name('addresses.store');
+        Route::put('mi-cuenta/direcciones/{address}', [AddressController::class, 'update'])->whereNumber('address')->name('addresses.update');
+        Route::delete('mi-cuenta/direcciones/{address}', [AddressController::class, 'destroy'])->whereNumber('address')->name('addresses.destroy');
+    });
+});

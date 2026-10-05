@@ -2,53 +2,106 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Inertia\Testing\AssertableInertia as Assert;
 
-class AuthenticationTest extends TestCase
+class AuthenticationTest extends CustomerAuthTestCase
 {
-    use RefreshDatabase;
-
-    public function test_login_screen_can_be_rendered()
+    public function test_login_screen_can_be_rendered_in_each_store()
     {
-        $response = $this->get('/login');
+        $this->get(self::COPPERS.'/login')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('auth/login')->where('store.slug', 'coppers')->where('auth.customer', null));
 
-        $response->assertStatus(200);
+        $this->get(self::G5.'/login')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('store.slug', 'g5'));
     }
 
-    public function test_users_can_authenticate_using_the_login_screen()
+    public function test_auth_pages_need_a_store_domain()
     {
-        $user = User::factory()->create();
-
-        $response = $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->get('http://otra.localhost/login')->assertNotFound();
+        $this->get('http://otra.localhost/register')->assertNotFound();
     }
 
-    public function test_users_can_not_authenticate_with_invalid_password()
+    public function test_customers_can_log_in_and_the_header_gets_their_name()
     {
-        $user = User::factory()->create();
+        $customer = $this->customer(['name' => 'Ana Pérez']);
 
-        $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'wrong-password',
-        ]);
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password'])
+            ->assertRedirect('/');
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($customer, 'customer');
+
+        $this->get(self::COPPERS.'/')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('auth.customer.name', 'Ana Pérez')
+                ->where('auth.customer.email', $customer->email)
+                ->missing('auth.customer.password'));
     }
 
-    public function test_users_can_logout()
+    public function test_customers_can_not_log_in_with_a_wrong_password()
     {
-        $user = User::factory()->create();
+        $customer = $this->customer();
 
-        $response = $this->actingAs($user)->post('/logout');
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'wrong-password'])
+            ->assertSessionHasErrors(['email' => 'Estas credenciales no coinciden con nuestros registros.']);
 
-        $this->assertGuest();
-        $response->assertRedirect('/');
+        $this->assertGuest('customer');
+    }
+
+    public function test_an_account_without_password_can_not_log_in_with_a_password()
+    {
+        $customer = $this->customer(['password' => null, 'google_id' => 'g-1']);
+
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => ''])->assertSessionHasErrors('password');
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password'])->assertSessionHasErrors('email');
+
+        $this->assertGuest('customer');
+    }
+
+    public function test_login_is_throttled_after_five_failed_attempts()
+    {
+        $customer = $this->customer();
+
+        foreach (range(1, 5) as $ignored) {
+            $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'mal']);
+        }
+
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password'])
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest('customer');
+    }
+
+    public function test_customers_can_log_out_without_touching_the_panel_session()
+    {
+        $customer = $this->customer();
+        $staff = User::factory()->create(['role' => UserRole::Owner]);
+
+        $this->actingAs($customer, 'customer')->actingAs($staff, 'web')
+            ->post(self::COPPERS.'/logout')
+            ->assertRedirect('/');
+
+        $this->assertGuest('customer');
+        $this->assertAuthenticatedAs($staff, 'web');
+    }
+
+    public function test_a_logged_in_customer_is_sent_away_from_the_login_page()
+    {
+        $this->actingAs($this->customer(), 'customer')
+            ->get(self::COPPERS.'/login')
+            ->assertRedirect();
+    }
+
+    public function test_google_button_is_only_offered_with_credentials()
+    {
+        $this->get(self::COPPERS.'/login')->assertInertia(fn (Assert $page) => $page->where('googleEnabled', false));
+
+        config(['services.google.client_id' => 'id', 'services.google.client_secret' => 'secreto']);
+
+        $this->get(self::COPPERS.'/login')->assertInertia(fn (Assert $page) => $page->where('googleEnabled', true));
+        $this->get(self::COPPERS.'/register')->assertInertia(fn (Assert $page) => $page->where('googleEnabled', true));
     }
 }

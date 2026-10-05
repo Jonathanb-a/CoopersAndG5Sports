@@ -9,11 +9,9 @@ use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/** Pide el enlace para recuperar la contraseña de un cliente (broker "customers"). */
 class PasswordResetLinkController extends Controller
 {
-    /**
-     * Show the password reset link request page.
-     */
     public function create(Request $request): Response
     {
         return Inertia::render('auth/forgot-password', [
@@ -21,21 +19,13 @@ class PasswordResetLinkController extends Controller
         ]);
     }
 
-    /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
+        $request->validate(['email' => ['required', 'email']], [], ['email' => 'correo']);
 
-        Password::sendResetLink(
-            $request->only('email')
-        );
+        Password::broker('customers')->sendResetLink($request->only('email'));
 
-        return back()->with('status', __('A reset link will be sent if the account exists.'));
+        // Misma respuesta exista o no la cuenta, para no revelar qué correos están registrados.
+        return back()->with('status', 'Si el correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña.');
     }
 }

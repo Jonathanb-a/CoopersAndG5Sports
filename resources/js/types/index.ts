@@ -1,7 +1,18 @@
 import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
-    user: User;
+    /** Cliente con sesión iniciada en esta tienda, o null. */
+    customer: { id: number; name: string; email: string } | null;
+}
+
+export interface CustomerAddress {
+    id: number;
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zip: string;
+    notes: string | null;
 }
 
 export interface BreadcrumbItem {
@@ -91,6 +102,7 @@ export interface SharedData {
     categories: StoreCategory[];
     quote: { message: string; author: string };
     auth: Auth;
+    googleEnabled: boolean;
     [key: string]: unknown;
 }
 

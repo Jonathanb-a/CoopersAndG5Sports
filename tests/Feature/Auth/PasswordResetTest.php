@@ -2,72 +2,112 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Customer;
+use App\Notifications\CustomerResetPassword;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
+use Illuminate\Support\Facades\Password;
+use Inertia\Testing\AssertableInertia as Assert;
 
-class PasswordResetTest extends TestCase
+class PasswordResetTest extends CustomerAuthTestCase
 {
-    use RefreshDatabase;
-
     public function test_reset_password_link_screen_can_be_rendered()
     {
-        $response = $this->get('/forgot-password');
-
-        $response->assertStatus(200);
+        $this->get(self::COPPERS.'/forgot-password')->assertOk()->assertInertia(fn (Assert $page) => $page->component('auth/forgot-password'));
     }
 
-    public function test_reset_password_link_can_be_requested()
+    public function test_the_reset_link_is_sent_to_customers_only()
     {
         Notification::fake();
+        $customer = $this->customer();
 
-        $user = User::factory()->create();
+        $this->post(self::COPPERS.'/forgot-password', ['email' => $customer->email])
+            ->assertSessionHas('status', 'Si el correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña.');
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        Notification::assertSentTo($customer, CustomerResetPassword::class);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        // Mismo mensaje con un correo que no existe, y no se manda nada.
+        Notification::fake();
+        $this->post(self::COPPERS.'/forgot-password', ['email' => 'nadie@example.com'])
+            ->assertSessionHas('status', 'Si el correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña.');
+        Notification::assertNothingSent();
     }
 
-    public function test_reset_password_screen_can_be_rendered()
+    public function test_the_email_carries_the_current_stores_name_and_domain()
     {
-        Notification::fake();
+        $customer = $this->customer(['email' => 'ana@example.com']);
 
-        $user = User::factory()->create();
+        $this->post(self::G5.'/forgot-password', ['email' => 'ana@example.com']);
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        $messages = $this->app->make('mailer')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $messages);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get('/reset-password/'.$notification->token);
+        $message = $messages[0]->getOriginalMessage();
 
-            $response->assertStatus(200);
-
-            return true;
-        });
+        $this->assertSame('Restablece tu contraseña de Sports G5', $message->getSubject());
+        $this->assertSame('Sports G5', $message->getFrom()[0]->getName());
+        $this->assertStringContainsString('Sports G5', $message->getHtmlBody());
+        $this->assertStringContainsString('http://g5.localhost/reset-password/', $message->getHtmlBody());
+        $this->assertStringNotContainsString('coppers.localhost', $message->getHtmlBody());
+        $this->assertSame('ana@example.com', $message->getTo()[0]->getAddress());
     }
 
-    public function test_password_can_be_reset_with_valid_token()
+    public function test_the_password_can_be_reset_with_a_valid_token_only_once()
     {
-        Notification::fake();
+        $customer = $this->customer();
+        $token = Password::broker('customers')->createToken($customer);
 
-        $user = User::factory()->create();
+        $this->get(self::COPPERS.'/reset-password/'.$token.'?email='.urlencode($customer->email))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('auth/reset-password')->where('token', $token)->where('email', $customer->email));
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        $this->post(self::COPPERS.'/reset-password', [
+            'token' => $token,
+            'email' => $customer->email,
+            'password' => 'nueva-contraseña',
+            'password_confirmation' => 'nueva-contraseña',
+        ])->assertRedirect(self::COPPERS.'/login')->assertSessionHas('status');
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = $this->post('/reset-password', [
-                'token' => $notification->token,
-                'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
-            ]);
+        $this->assertTrue(Hash::check('nueva-contraseña', $customer->fresh()->password));
 
-            $response
-                ->assertSessionHasNoErrors()
-                ->assertRedirect(route('login'));
+        $this->post(self::COPPERS.'/reset-password', [
+            'token' => $token,
+            'email' => $customer->email,
+            'password' => 'otra-contraseña',
+            'password_confirmation' => 'otra-contraseña',
+        ])->assertSessionHasErrors('email');
 
-            return true;
-        });
+        $this->assertTrue(Hash::check('nueva-contraseña', $customer->fresh()->password));
+    }
+
+    public function test_a_token_from_another_email_does_not_work()
+    {
+        $customer = $this->customer();
+        $other = $this->customer();
+        $token = Password::broker('customers')->createToken($customer);
+
+        $this->post(self::COPPERS.'/reset-password', [
+            'token' => $token,
+            'email' => $other->email,
+            'password' => 'nueva-contraseña',
+            'password_confirmation' => 'nueva-contraseña',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertTrue(Hash::check('password', $other->fresh()->password));
+    }
+
+    public function test_an_account_created_with_google_can_set_a_password_by_email()
+    {
+        $customer = $this->customer(['password' => null, 'google_id' => 'g-1']);
+        $token = Password::broker('customers')->createToken($customer);
+
+        $this->post(self::COPPERS.'/reset-password', [
+            'token' => $token,
+            'email' => $customer->email,
+            'password' => 'nueva-contraseña',
+            'password_confirmation' => 'nueva-contraseña',
+        ])->assertRedirect(self::COPPERS.'/login');
+
+        $this->assertTrue(Customer::find($customer->id)->hasPassword());
     }
 }

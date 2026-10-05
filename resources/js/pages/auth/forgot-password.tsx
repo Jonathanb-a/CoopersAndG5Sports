@@ -1,63 +1,54 @@
-// Components
-import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
-
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
+import { AuthCard } from '@/components/store/auth-card';
+import { StoreButton } from '@/components/store/button';
+import { Field, FormStatus } from '@/components/store/form';
+import StoreLayout from '@/Themes';
+import { type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { type FormEvent } from 'react';
 
 export default function ForgotPassword({ status }: { status?: string }) {
-    const { data, setData, post, processing, errors } = useForm({
-        email: '',
-    });
+    const { store } = usePage<SharedData>().props;
+    const form = useForm({ email: '' });
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-
-        post(route('password.email'));
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.post('/forgot-password');
     };
 
     return (
-        <AuthLayout title="Recuperar contraseña" description="Ingresa tu correo para recibir un enlace de recuperación">
-            <Head title="Recuperar contraseña" />
+        <StoreLayout>
+            <Head title={`Recuperar contraseña · ${store.name}`} />
 
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+            <AuthCard
+                title="Recuperar contraseña"
+                description="Escribe tu correo y te mandamos un enlace para crear una contraseña nueva."
+                footer={
+                    <Link href="/login" className="text-store-link font-semibold underline underline-offset-4">
+                        Volver a ingresar
+                    </Link>
+                }
+            >
+                <FormStatus className="mb-5">{status}</FormStatus>
 
-            <div className="space-y-6">
-                <form onSubmit={submit}>
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Correo electrónico</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            name="email"
-                            autoComplete="off"
-                            value={data.email}
-                            autoFocus
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="correo@ejemplo.com"
-                        />
+                <form onSubmit={submit} className="space-y-4" noValidate>
+                    <Field
+                        label="Correo electrónico"
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        inputMode="email"
+                        autoFocus
+                        required
+                        value={form.data.email}
+                        onChange={(event) => form.setData('email', event.target.value)}
+                        error={form.errors.email}
+                    />
 
-                        <InputError message={errors.email} />
-                    </div>
-
-                    <div className="my-6 flex items-center justify-start">
-                        <Button className="w-full" disabled={processing}>
-                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                            Enviar enlace de recuperación
-                        </Button>
-                    </div>
+                    <StoreButton type="submit" size="lg" className="w-full" disabled={form.processing}>
+                        {form.processing ? 'Enviando…' : 'Enviar enlace'}
+                    </StoreButton>
                 </form>
-
-                <div className="text-muted-foreground space-x-1 text-center text-sm">
-                    <span>O regresa a</span>
-                    <TextLink href={route('login')}>iniciar sesión</TextLink>
-                </div>
-            </div>
-        </AuthLayout>
+            </AuthCard>
+        </StoreLayout>
     );
 }

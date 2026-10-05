@@ -98,3 +98,28 @@ Sensación: cancha y calle, energía, grafiti.
 ### Ambos temas
 - Contraste mínimo AA en textos y botones.
 - Los logos van en public/brand/{theme}/logo.png.
+
+## Decisiones de la fase 4
+- Ver la tienda no requiere cuenta. Comprar sí: el checkout exige iniciar sesión.
+- Un cliente es una sola cuenta para ambas tiendas (misma tabla customers),
+  pero la sesión es por dominio: inicia sesión en cada tienda por separado.
+- Guard "customer" con el modelo Customer para la tienda. El panel /admin
+  sigue con el guard de users. No mezclar los dos.
+- Registro con correo y contraseña, o con Google. Una cuenta de Google crea
+  un Customer con google_id y sin contraseña.
+- El carrito vive en la sesión (no hay tabla), con variante, cantidad y precio
+  leído siempre de la base de datos. Nunca confiar en precios del navegador.
+- Pago por transferencia: el pedido se aparta (status apartado) y vence a las
+  48 horas (config shop.reserve_hours). El cliente paga y manda el comprobante
+  por WhatsApp con su número de pedido.
+- Apartar descuenta stock con StockService (tipo venta_web) dentro de una
+  transacción con lockForUpdate.
+- Sobre pedido: si la cantidad pedida supera el stock y el producto tiene
+  allow_backorder, la parte sin stock va en una línea aparte con
+  is_backorder = true y no descuenta stock.
+- order_items guarda nombre, talla y precio del momento de la compra.
+- Número de pedido legible por tienda (CP-00042, G5-00042), único. Prefijos
+  en config/shop.php.
+- Métodos de entrega: recoger en tienda (gratis), local en Zihuatanejo y
+  nacional. El costo de local y nacional es por tienda; si está vacío, ese
+  método no se ofrece.

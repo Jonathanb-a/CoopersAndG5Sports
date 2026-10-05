@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\CouponType;
 use App\Models\Concerns\BelongsToStore;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Coupon extends Model
 {
@@ -35,6 +37,12 @@ class Coupon extends Model
             'used_count' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /** El código siempre se guarda en mayúsculas y sin espacios en los extremos. */
+    protected function code(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => $value === null ? null : Str::upper(trim($value)));
     }
 
     public function store(): BelongsTo

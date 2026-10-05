@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Testing\AssertableInertia as Assert;
 
 class AuthenticationTest extends CustomerAuthTestCase
@@ -39,6 +40,41 @@ class AuthenticationTest extends CustomerAuthTestCase
                 ->where('auth.customer.name', 'Ana Pérez')
                 ->where('auth.customer.email', $customer->email)
                 ->missing('auth.customer.password'));
+    }
+
+    public function test_keep_me_signed_in_sets_a_remember_cookie_and_token()
+    {
+        $customer = $this->customer();
+        $recaller = Auth::guard('customer')->getRecallerName();
+
+        $response = $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password', 'remember' => true]);
+
+        $cookie = collect($response->headers->getCookies())->firstWhere(fn ($cookie) => $cookie->getName() === $recaller);
+
+        $this->assertNotNull($cookie);
+        $this->assertNotEmpty($customer->fresh()->remember_token);
+        $this->assertGreaterThan(now()->addDays(300)->timestamp, $cookie->getExpiresTime());
+    }
+
+    public function test_without_the_checkbox_no_remember_cookie_is_set()
+    {
+        $customer = $this->customer();
+        $recaller = Auth::guard('customer')->getRecallerName();
+
+        $response = $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password']);
+
+        $this->assertNull(collect($response->headers->getCookies())->firstWhere(fn ($cookie) => $cookie->getName() === $recaller));
+        $this->assertNull($customer->fresh()->remember_token);
+        $this->assertAuthenticatedAs($customer, 'customer');
+    }
+
+    public function test_the_remember_token_is_never_sent_to_the_browser()
+    {
+        $customer = $this->customer();
+        $this->post(self::COPPERS.'/login', ['email' => $customer->email, 'password' => 'password', 'remember' => true]);
+
+        $this->assertArrayNotHasKey('remember_token', $customer->fresh()->toArray());
+        $this->get(self::COPPERS.'/')->assertInertia(fn (Assert $page) => $page->missing('auth.customer.remember_token'));
     }
 
     public function test_customers_can_not_log_in_with_a_wrong_password()

@@ -80,6 +80,22 @@ class PasswordResetTest extends CustomerAuthTestCase
         $this->assertTrue(Hash::check('nueva-contraseña', $customer->fresh()->password));
     }
 
+    public function test_resetting_the_password_invalidates_remembered_sessions()
+    {
+        $customer = $this->customer(['remember_token' => 'token-viejo']);
+        $token = Password::broker('customers')->createToken($customer);
+
+        $this->post(self::COPPERS.'/reset-password', [
+            'token' => $token,
+            'email' => $customer->email,
+            'password' => 'nueva-contraseña',
+            'password_confirmation' => 'nueva-contraseña',
+        ])->assertRedirect(self::COPPERS.'/login');
+
+        $this->assertNotSame('token-viejo', $customer->fresh()->remember_token);
+        $this->assertNotEmpty($customer->fresh()->remember_token);
+    }
+
     public function test_a_token_from_another_email_does_not_work()
     {
         $customer = $this->customer();

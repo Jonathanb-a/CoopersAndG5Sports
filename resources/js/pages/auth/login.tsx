@@ -9,7 +9,7 @@ import { type FormEvent } from 'react';
 
 export default function Login({ status }: { status?: string }) {
     const { store, errors: pageErrors } = usePage<SharedData & { errors: Record<string, string> }>().props;
-    const form = useForm({ email: '', password: '' });
+    const form = useForm({ email: '', password: '', remember: false });
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -62,7 +62,17 @@ export default function Login({ status }: { status?: string }) {
                         error={form.errors.password}
                     />
 
-                    <div className="text-right text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                            <input
+                                type="checkbox"
+                                name="remember"
+                                checked={form.data.remember}
+                                onChange={(event) => form.setData('remember', event.target.checked)}
+                                className="accent-store-action size-5 shrink-0"
+                            />
+                            Mantener sesión iniciada
+                        </label>
                         <Link href="/forgot-password" className="text-store-link font-medium underline underline-offset-4">
                             ¿Olvidaste tu contraseña?
                         </Link>

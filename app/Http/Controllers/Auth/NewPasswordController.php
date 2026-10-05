@@ -7,6 +7,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -34,7 +35,8 @@ class NewPasswordController extends Controller
         $status = Password::broker('customers')->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($customer) use ($request) {
-                $customer->forceFill(['password' => $request->password])->save();
+                // Se renueva el token de "Mantener sesión iniciada": las sesiones recordadas dejan de valer.
+                $customer->forceFill(['password' => $request->password, 'remember_token' => Str::random(60)])->save();
 
                 event(new PasswordReset($customer));
             },

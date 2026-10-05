@@ -4,7 +4,7 @@ import { type ComponentProps } from 'react';
 
 export const buttonVariants = cva(
     [
-        'store-transition store-lift inline-flex items-center justify-center gap-2 rounded-store font-store-body font-semibold',
+        'store-transition store-lift inline-flex items-center justify-center gap-2 rounded-store text-center font-store-body font-semibold',
         'border-[length:var(--store-border-width)] border-transparent',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-store-accent',
         'disabled:pointer-events-none disabled:opacity-50',

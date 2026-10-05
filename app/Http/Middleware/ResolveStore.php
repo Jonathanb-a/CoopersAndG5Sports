@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Category;
 use App\Models\Store;
+use App\Services\CartService;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -38,6 +39,9 @@ class ResolveStore
             ->whereHas('products', fn ($query) => $query->where('is_active', true))
             ->orderBy('name')
             ->get(['categories.id', 'categories.name', 'categories.slug']));
+
+        // Contador y mini carrito del encabezado. Con el carrito vacío no consulta la base de datos.
+        Inertia::share('miniCart', fn () => app(CartService::class)->summary($store));
 
         return $next($request);
     }

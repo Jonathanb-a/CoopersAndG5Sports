@@ -103,6 +103,7 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     googleEnabled: boolean;
+    miniCart: MiniCart;
     [key: string]: unknown;
 }
 
@@ -119,7 +120,35 @@ export interface User {
 
 export type SizeStatus = 'available' | 'last-piece' | 'backorder' | 'sold-out';
 
+/** Línea del carrito: todo sale de la base de datos, no del navegador. */
+export interface CartLine {
+    variant_id: number;
+    product_id: number;
+    slug: string;
+    name: string;
+    brand: string | null;
+    color: string | null;
+    size: string;
+    image_url: string | null;
+    unit_price: string;
+    quantity: number;
+    line_total: string;
+    /** Piezas de esta línea que no hay en stock y se piden sobre pedido. */
+    backorder_quantity: number;
+    backorder_days: number | null;
+    /** Máximo que se puede llevar de esta talla. */
+    max_quantity: number;
+}
+
+/** Contador y líneas del carrito para el encabezado y el mini carrito (se comparte en toda la tienda). */
+export interface MiniCart {
+    count: number;
+    subtotal: string;
+    lines: CartLine[];
+}
+
 export interface ProductSize {
+    variant_id: number;
     size: string;
     status: SizeStatus;
     selectable: boolean;

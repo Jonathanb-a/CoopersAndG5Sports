@@ -9,12 +9,14 @@ interface MobileMenuProps {
     /** Elemento raíz del tema: el panel se monta dentro para heredar sus variables CSS. */
     container: HTMLElement | null;
     title: string;
+    /** Lado del que sale el panel. */
+    side?: 'left' | 'right';
     className?: string;
     children: ReactNode;
 }
 
-/** Menú lateral para celular: con foco atrapado, cierra con Escape y respeta el movimiento reducido. */
-export function MobileMenu({ open, onOpenChange, container, title, className, children }: MobileMenuProps) {
+/** Panel lateral (menú, filtros, mini carrito): con foco atrapado, cierra con Escape y respeta el movimiento reducido. */
+export function MobileMenu({ open, onOpenChange, container, title, side = 'left', className, children }: MobileMenuProps) {
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal container={container}>
@@ -22,8 +24,11 @@ export function MobileMenu({ open, onOpenChange, container, title, className, ch
                 <Dialog.Content
                     aria-describedby={undefined}
                     className={cn(
-                        'bg-store-bg text-store-text fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col p-6 shadow-xl outline-none',
-                        'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:animate-in data-[state=open]:slide-in-from-left',
+                        'bg-store-bg text-store-text fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col p-6 shadow-xl outline-none',
+                        'data-[state=closed]:animate-out data-[state=open]:animate-in',
+                        side === 'left'
+                            ? 'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left left-0'
+                            : 'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right right-0',
                         className,
                     )}
                 >

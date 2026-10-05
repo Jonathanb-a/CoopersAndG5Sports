@@ -9,7 +9,7 @@ import { type FormEvent } from 'react';
 
 export default function Login({ status }: { status?: string }) {
     const { store, errors: pageErrors } = usePage<SharedData & { errors: Record<string, string> }>().props;
-    const form = useForm({ email: '', password: '', remember: false });
+    const form = useForm({ email: '', password: '', remember: false as boolean });
 
     const submit = (event: FormEvent) => {
         event.preventDefault();

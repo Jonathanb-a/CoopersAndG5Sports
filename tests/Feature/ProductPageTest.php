@@ -117,14 +117,15 @@ class ProductPageTest extends TestCase
 
     public function test_a_sold_out_size_without_backorder_is_not_selectable()
     {
-        $this->product($this->g5, 'Tenis', ['26' => 3, '27' => 1, '28' => 0]);
+        $product = $this->product($this->g5, 'Tenis', ['26' => 3, '27' => 1, '28' => 0]);
+        $ids = $product->variants()->pluck('id', 'size');
 
         $this->get('http://g5.localhost/producto/tenis')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.sizes', [
-                    ['size' => '26', 'status' => 'available', 'selectable' => true],
-                    ['size' => '27', 'status' => 'last-piece', 'selectable' => true],
-                    ['size' => '28', 'status' => 'sold-out', 'selectable' => false],
+                    ['variant_id' => $ids['26'], 'size' => '26', 'status' => 'available', 'selectable' => true],
+                    ['variant_id' => $ids['27'], 'size' => '27', 'status' => 'last-piece', 'selectable' => true],
+                    ['variant_id' => $ids['28'], 'size' => '28', 'status' => 'sold-out', 'selectable' => false],
                 ]));
     }
 
@@ -136,8 +137,8 @@ class ProductPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.allow_backorder', true)
                 ->where('product.backorder_days', 7)
-                ->where('product.sizes.0', ['size' => 'S', 'status' => 'backorder', 'selectable' => true])
-                ->where('product.sizes.1', ['size' => 'M', 'status' => 'available', 'selectable' => true]));
+                ->where('product.sizes.0', fn ($size) => collect($size)->except('variant_id')->all() === ['size' => 'S', 'status' => 'backorder', 'selectable' => true])
+                ->where('product.sizes.1', fn ($size) => collect($size)->except('variant_id')->all() === ['size' => 'M', 'status' => 'available', 'selectable' => true]));
     }
 
     public function test_backorder_days_are_ignored_when_the_product_does_not_allow_backorder()
@@ -158,7 +159,7 @@ class ProductPageTest extends TestCase
         $this->get('http://coppers.localhost/producto/camisa')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.sizes', fn ($sizes) => collect($sizes)->pluck('size')->all() === ['30', 'S', 'M', 'XL']
-                    && collect($sizes)->every(fn ($size) => array_keys($size) === ['size', 'status', 'selectable'])));
+                    && collect($sizes)->every(fn ($size) => array_keys($size) === ['variant_id', 'size', 'status', 'selectable'])));
     }
 
     public function test_the_page_carries_brand_name_color_price_description_and_photos_in_order()

@@ -65,7 +65,7 @@ class ProductController extends Controller
      * Tallas con su estado. Las agotadas sin sobre pedido no se pueden elegir.
      * No se publica el stock exacto, solo el estado.
      *
-     * @return list<array{size: string, status: string, selectable: bool}>
+     * @return list<array{variant_id: int, size: string, status: string, selectable: bool}>
      */
     private function sizes(Product $product): array
     {
@@ -79,7 +79,7 @@ class ProductController extends Controller
                     default => 'sold-out',
                 };
 
-                return ['size' => $variant->size, 'status' => $status, 'selectable' => $status !== 'sold-out'];
+                return ['variant_id' => $variant->id, 'size' => $variant->size, 'status' => $status, 'selectable' => $status !== 'sold-out'];
             })
             ->values()
             ->all();

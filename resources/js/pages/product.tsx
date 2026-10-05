@@ -1,5 +1,6 @@
 import { StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
+import { MiniCartPanel } from '@/components/store/mini-cart';
 import { ProductCard } from '@/components/store/product-card';
 import { ProductGallery } from '@/components/store/product-gallery';
 import { Reveal, ScrollReveal } from '@/components/store/reveal';
@@ -8,7 +9,7 @@ import { SizeSelector } from '@/components/store/size-selector';
 import { formatMoney } from '@/lib/store';
 import StoreLayout from '@/Themes';
 import { type ProductDetail, type SharedData, type StoreProduct } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { MessageCircle, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 
@@ -36,6 +37,35 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
     const [size, setSize] = useState<string | null>(selectable.length === 1 ? selectable[0].size : null);
 
     const chosen = product.sizes.find((item) => item.size === size) ?? null;
+
+    const [adding, setAdding] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [panelOpen, setPanelOpen] = useState(false);
+
+    // Agrega una pieza de la talla elegida. El servidor lee precio y stock de la base de datos: aquí solo va el id.
+    const addToCart = () => {
+        if (!chosen) {
+            setAddError('Elige una talla para agregar al carrito.');
+
+            return;
+        }
+
+        router.post(
+            '/carrito',
+            { variant_id: chosen.variant_id, quantity: 1 },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onStart: () => {
+                    setAdding(true);
+                    setAddError(null);
+                },
+                onSuccess: () => setPanelOpen(true),
+                onError: (errors) => setAddError(errors.cart ?? 'No pudimos agregar el producto. Inténtalo de nuevo.'),
+                onFinish: () => setAdding(false),
+            },
+        );
+    };
     const soldOut = product.sizes.length > 0 && selectable.length === 0;
 
     // Mensaje para WhatsApp: producto, talla elegida y enlace.
@@ -102,7 +132,14 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
 
                         <div className="border-store-border mt-8 border-t pt-6">
                             {product.sizes.length > 0 ? (
-                                <SizeSelector sizes={product.sizes} value={size} onChange={setSize} />
+                                <SizeSelector
+                                    sizes={product.sizes}
+                                    value={size}
+                                    onChange={(next) => {
+                                        setSize(next);
+                                        setAddError(null);
+                                    }}
+                                />
                             ) : (
                                 <p className="text-store-muted">Este producto todavía no tiene tallas registradas.</p>
                             )}
@@ -121,15 +158,26 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                             </div>
 
                             <div className="mt-6 flex flex-col gap-3">
-                                {/* El carrito llega en la fase 4: el botón se ve, pero todavía no se puede usar. */}
                                 <div>
-                                    <StoreButton size="lg" disabled aria-describedby="carrito-proximamente" className="w-full">
+                                    <StoreButton
+                                        size="lg"
+                                        onClick={addToCart}
+                                        disabled={soldOut || adding}
+                                        aria-describedby={addError ? 'carrito-error' : undefined}
+                                        className="w-full"
+                                    >
                                         <ShoppingBag className="size-5" aria-hidden="true" />
-                                        Agregar al carrito
+                                        {soldOut ? 'Agotado' : adding ? 'Agregando…' : 'Agregar al carrito'}
                                     </StoreButton>
-                                    <p id="carrito-proximamente" className="text-store-muted mt-2 text-center text-sm">
-                                        Próximamente
-                                    </p>
+                                    {addError && (
+                                        <p
+                                            id="carrito-error"
+                                            role="alert"
+                                            className="mt-2 text-center text-sm font-medium text-red-600 dark:text-red-400"
+                                        >
+                                            {addError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {whatsappHref && (
@@ -172,6 +220,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                     </div>
                 </Container>
             )}
+            <MiniCartPanel open={panelOpen} onOpenChange={setPanelOpen} />
         </>
     );
 }

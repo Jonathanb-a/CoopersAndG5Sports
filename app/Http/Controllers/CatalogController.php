@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Support\ProductCard;
+use App\Support\SizeOrder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -27,9 +28,6 @@ class CatalogController extends Controller
     private const DEFAULT_SORT = 'nuevos';
 
     private const SORTS = ['nuevos', 'precio-menor', 'precio-mayor'];
-
-    /** Orden de las tallas en letras; las numéricas van primero, de menor a mayor. */
-    private const LETTER_SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
     public function __invoke(Request $request, ?string $slug = null): Response|RedirectResponse
     {
@@ -136,21 +134,9 @@ class CatalogController extends Controller
             ->whereIn('product_id', (clone $scope)->select('products.id'))
             ->distinct()
             ->pluck('size')
-            ->sort(fn (string $a, string $b) => $this->sizeRank($a) <=> $this->sizeRank($b))
+            ->sort(SizeOrder::compare(...))
             ->values()
             ->all();
-    }
-
-    /** @return array{0: int, 1: float|int|string} */
-    private function sizeRank(string $size): array
-    {
-        if (is_numeric($size)) {
-            return [0, (float) $size];
-        }
-
-        $letter = array_search(strtoupper($size), self::LETTER_SIZES, true);
-
-        return $letter === false ? [2, mb_strtolower($size)] : [1, $letter];
     }
 
     /** Números de página con puntos suspensivos: 1 … 4 5 6 … 20 */

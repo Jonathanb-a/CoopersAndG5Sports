@@ -52,6 +52,7 @@ export type ProductTagKind = 'sold-out' | 'backorder' | 'last-piece';
 /** Tarjeta de producto de la tienda (inicio y catálogo). */
 export interface StoreProduct {
     id: number;
+    slug: string;
     name: string;
     brand: string | null;
     price: string;
@@ -102,4 +103,27 @@ export interface User {
     created_at: string;
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+export type SizeStatus = 'available' | 'last-piece' | 'backorder' | 'sold-out';
+
+export interface ProductSize {
+    size: string;
+    status: SizeStatus;
+    selectable: boolean;
+}
+
+export interface ProductDetail {
+    id: number;
+    slug: string;
+    name: string;
+    brand: string | null;
+    color: string | null;
+    price: string;
+    description: string | null;
+    allow_backorder: boolean;
+    backorder_days: number | null;
+    images: string[];
+    sizes: ProductSize[];
+    category: { name: string; slug: string } | null;
 }

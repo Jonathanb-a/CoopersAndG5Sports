@@ -146,6 +146,7 @@ function CatalogContent({ category, products, pagination, filters, options }: Ca
                                     <ProductCard
                                         name={product.name}
                                         brand={product.brand}
+                                        href={`/producto/${product.slug}`}
                                         price={product.price}
                                         imageUrl={product.image_url}
                                         tag={product.tag}

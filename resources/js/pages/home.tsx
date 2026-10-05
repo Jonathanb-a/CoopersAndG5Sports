@@ -69,6 +69,7 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
                                 <ProductCard
                                     name={product.name}
                                     brand={product.brand}
+                                    href={`/producto/${product.slug}`}
                                     price={product.price}
                                     imageUrl={product.image_url}
                                     tag={product.tag}

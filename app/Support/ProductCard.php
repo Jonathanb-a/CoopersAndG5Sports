@@ -11,13 +11,14 @@ use Illuminate\Support\Facades\Storage;
  */
 class ProductCard
 {
-    /** @return array{id: int, name: string, brand: ?string, price: string, image_url: ?string, tag: ?string} */
+    /** @return array{id: int, slug: string, name: string, brand: ?string, price: string, image_url: ?string, tag: ?string} */
     public static function from(Product $product): array
     {
         $path = $product->images->first()?->path;
 
         return [
             'id' => $product->id,
+            'slug' => $product->slug,
             'name' => $product->name,
             'brand' => $product->brand?->name,
             'price' => $product->price,

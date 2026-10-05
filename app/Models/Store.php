@@ -27,6 +27,14 @@ class Store extends Model
         ];
     }
 
+    /** Número de WhatsApp en formato internacional, solo dígitos. Un número de 10 dígitos se toma como mexicano (+52). */
+    public function whatsappNumber(): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $this->whatsapp_phone);
+
+        return strlen($digits) < 10 ? null : (strlen($digits) === 10 ? '52'.$digits : $digits);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreHomeController;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,7 @@ Route::middleware(ResolveStore::class)->group(function () {
     Route::get('/', StoreHomeController::class)->name('home');
     Route::get('catalogo', CatalogController::class)->name('catalog');
     Route::get('categoria/{slug}', CatalogController::class)->name('category');
+    Route::get('producto/{slug}', ProductController::class)->name('product');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -1,5 +1,6 @@
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { Link } from '@inertiajs/react';
 import { Tag, type TagKind } from './tag';
 
 interface ProductCardProps {
@@ -41,12 +42,12 @@ export function ProductCard({ name, price, brand, imageUrl, tag, href, className
     return (
         <article className={cn('store-surface store-transition store-lift flex h-full flex-col overflow-hidden', className)}>
             {href ? (
-                <a
+                <Link
                     href={href}
                     className="focus-visible:outline-store-accent flex flex-1 flex-col focus-visible:outline-2 focus-visible:-outline-offset-2"
                 >
                     {body}
-                </a>
+                </Link>
             ) : (
                 body
             )}

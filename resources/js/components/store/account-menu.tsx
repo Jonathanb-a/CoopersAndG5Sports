@@ -12,7 +12,7 @@ const item =
 
 /**
  * Cuenta del cliente en el encabezado: «Ingresar» si no ha iniciado sesión; si ya lo hizo, su nombre
- * con un menú (Mi cuenta, Cerrar sesión). En celular solo se ve el ícono.
+ * con un menú (Mi cuenta, Mis pedidos, Cerrar sesión). En celular solo se ve el ícono.
  */
 export function AccountMenu() {
     const { auth } = usePage<SharedData>().props;
@@ -46,6 +46,11 @@ export function AccountMenu() {
                     <DropdownMenu.Item asChild>
                         <Link href="/mi-cuenta" className={item}>
                             Mi cuenta
+                        </Link>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item asChild>
+                        <Link href="/mi-cuenta/pedidos" className={item}>
+                            Mis pedidos
                         </Link>
                     </DropdownMenu.Item>
                     <DropdownMenu.Item className={item} onSelect={() => router.post('/logout')}>

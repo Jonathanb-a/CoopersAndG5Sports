@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Account\AddressController;
+use App\Http\Controllers\Account\OrderController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -60,6 +61,12 @@ Route::middleware(ResolveStore::class)->group(function () {
         Route::get('mi-cuenta', [AccountController::class, 'show'])->name('account.show');
         Route::patch('mi-cuenta', [AccountController::class, 'update'])->name('account.update');
         Route::put('mi-cuenta/contrasena', [AccountController::class, 'updatePassword'])->name('account.password');
+
+        // Mis pedidos (de esta tienda).
+        Route::get('mi-cuenta/pedidos', [OrderController::class, 'index'])->name('account.orders.index');
+        Route::get('mi-cuenta/pedidos/{number}', [OrderController::class, 'show'])->name('account.orders.show');
+        Route::post('mi-cuenta/pedidos/{number}/cancelar', [OrderController::class, 'cancel'])->name('account.orders.cancel');
+        Route::post('mi-cuenta/pedidos/{number}/solicitar-cancelacion', [OrderController::class, 'requestCancellation'])->name('account.orders.request-cancellation');
 
         Route::post('mi-cuenta/direcciones', [AddressController::class, 'store'])->name('addresses.store');
         Route::put('mi-cuenta/direcciones/{address}', [AddressController::class, 'update'])->whereNumber('address')->name('addresses.update');

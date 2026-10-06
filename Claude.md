@@ -123,3 +123,23 @@ Sensación: cancha y calle, energía, grafiti.
 - Métodos de entrega: recoger en tienda (gratis), local en Zihuatanejo y
   nacional. El costo de local y nacional es por tienda; si está vacío, ese
   método no se ofrece.
+
+
+## Decisiones de pedidos (fase 5)
+- Transiciones válidas: apartado→pagado|cancelado; pagado→enviado|cancelado;
+  enviado→entregado. Entregado y cancelado son finales. Solo
+  OrderStatusService cambia el estado y registra order_status_histories.
+- Cancelar un apartado: cliente, staff u owner. Cancelar un pedido pagado:
+  solo owner; el cliente solo puede solicitarlo.
+- Cancelar regresa el stock con StockService (tipo cancelacion) salvo que se
+  indique lo contrario. Las líneas sobre pedido no tocan stock. El cupón
+  recupera su uso.
+- "Reactivar" solo aplica a pedidos cancelados por el sistema sin pago.
+- Reembolsos manuales por transferencia; el sistema solo registra refunded_at.
+- "Enviado" se muestra como "Listo para recoger" si el método es recoger y
+  "En camino" en los demás.
+- Los avisos al cliente son botones de WhatsApp con mensaje prellenado; no hay
+  envío automático.
+- Máximo de pedidos sin pagar por cliente: shop.max_open_reservations = 3.
+- Cambios y devoluciones después de entregar se atienden por WhatsApp y se
+  registran con un ajuste de stock manual (política pendiente con el cliente).

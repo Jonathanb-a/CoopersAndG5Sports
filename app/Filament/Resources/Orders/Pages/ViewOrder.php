@@ -9,6 +9,7 @@ use App\Exceptions\InvalidOrderTransitionException;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\CancellationRequestService;
 use App\Services\OrderCancellationService;
 use App\Services\OrderReservationService;
 use App\Services\OrderStatusService;
@@ -49,6 +50,7 @@ class ViewOrder extends ViewRecord
             $this->extendAction(),
             $this->reactivateAction(),
             $this->markRefundedAction(),
+            $this->rejectCancellationAction(),
             $this->whatsappAction(),
             $this->editNotesAction(),
             $this->editAddressAction(),
@@ -254,6 +256,41 @@ class ViewOrder extends ViewRecord
                 }
 
                 Notification::make()->success()->title('Pedido reactivado')->body('Fecha límite de pago: '.$order->expires_at->format('d/m/Y H:i'))->send();
+            });
+    }
+
+    /**
+     * El cliente pidió cancelar un pedido pagado. El personal decide: lo cancela con «Cancelar pedido»
+     * o rechaza la solicitud aquí, que la limpia y deja la nota en el historial.
+     */
+    private function rejectCancellationAction(): Action
+    {
+        return Action::make('rejectCancellation')
+            ->label('Rechazar solicitud')
+            ->icon(Heroicon::OutlinedHandRaised)
+            ->color('gray')
+            ->visible(fn (Order $record) => $record->cancellation_requested_at !== null && $record->status !== OrderStatus::Cancelled)
+            ->requiresConfirmation()
+            ->modalHeading('Rechazar solicitud de cancelación')
+            ->modalDescription('El pedido sigue su curso. La solicitud se quita y queda la nota en el historial; avísale al cliente por WhatsApp.')
+            ->modalSubmitActionLabel('Rechazar solicitud')
+            ->schema([
+                Textarea::make('note')
+                    ->label('Nota')
+                    ->helperText('Por qué no se cancela. Solo la ve el personal.')
+                    ->rows(2)
+                    ->maxLength(500),
+            ])
+            ->action(function (array $data, Order $record) {
+                try {
+                    app(CancellationRequestService::class)->reject($record, auth()->user(), $data['note'] ?? null);
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo rechazar')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Solicitud rechazada')->send();
             });
     }
 

@@ -40,6 +40,20 @@ class EditStoreProfile extends EditTenantProfile
                 Textarea::make('bank_info')
                     ->label('Datos bancarios')
                     ->rows(4),
+                TextInput::make('local_shipping_cost')
+                    ->label('Costo de entrega local (Zihuatanejo)')
+                    ->helperText('Vacío = no se ofrece entrega local. Con 0 se ofrece gratis.')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(99999999.99)
+                    ->prefix('$'),
+                TextInput::make('national_shipping_cost')
+                    ->label('Costo de envío nacional')
+                    ->helperText('Vacío = no se ofrece envío nacional. Con 0 se ofrece gratis.')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(99999999.99)
+                    ->prefix('$'),
                 Textarea::make('about_text')
                     ->label('Quiénes somos')
                     ->helperText('Se muestra en el inicio de la tienda. Déjalo vacío para ocultar la sección.')

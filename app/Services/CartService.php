@@ -82,6 +82,16 @@ class CartService
         session()->forget([self::CART_KEY.$store->id, self::SEEN_PRICES_KEY.$store->id]);
     }
 
+    /**
+     * Ids de las tallas que hay en el carrito (según la sesión).
+     *
+     * @return list<int>
+     */
+    public function variantIds(Store $store): array
+    {
+        return array_keys($this->cart($store));
+    }
+
     /** Piezas en el carrito según la sesión (sin consultar la base de datos): para el contador del encabezado. */
     public function rawCount(Store $store): int
     {

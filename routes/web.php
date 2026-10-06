@@ -9,6 +9,8 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderConfirmationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreHomeController;
 use App\Http\Middleware\ResolveStore;
@@ -28,9 +30,6 @@ Route::middleware(ResolveStore::class)->group(function () {
     Route::delete('carrito/{variant}', [CartController::class, 'destroy'])->whereNumber('variant')->name('cart.destroy');
     Route::post('carrito/cupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
     Route::delete('carrito/cupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
-
-    // Compra: exige cuenta. La pantalla llega en la tarea 15; mientras tanto solo manda a iniciar sesión.
-    Route::get('checkout', fn () => abort(404))->middleware('auth:customer')->name('checkout');
 
     // Cuentas de clientes (guard "customer"). La sesión es por dominio: se inicia en cada tienda.
     Route::middleware('guest:customer')->group(function () {
@@ -52,6 +51,11 @@ Route::middleware(ResolveStore::class)->group(function () {
 
     Route::middleware('auth:customer')->group(function () {
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+        // Compra: exige cuenta.
+        Route::get('checkout', [CheckoutController::class, 'show'])->name('checkout');
+        Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+        Route::get('pedido/{number}/gracias', OrderConfirmationController::class)->name('order.thanks');
 
         Route::get('mi-cuenta', [AccountController::class, 'show'])->name('account.show');
         Route::patch('mi-cuenta', [AccountController::class, 'update'])->name('account.update');

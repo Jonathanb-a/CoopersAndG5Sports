@@ -65,3 +65,42 @@ export function FormAlert({ children, className }: { children?: ReactNode; class
         </p>
     );
 }
+
+interface TextAreaFieldProps extends Omit<ComponentProps<'textarea'>, 'id'> {
+    label: string;
+    error?: string;
+    hint?: string;
+    wrapperClassName?: string;
+}
+
+/** Campo de varias líneas, con la misma etiqueta y manejo de errores que Field. */
+export function TextAreaField({ label, error, hint, className, wrapperClassName, ...props }: TextAreaFieldProps) {
+    const id = useId();
+    const messageId = `${id}-message`;
+
+    return (
+        <div className={wrapperClassName}>
+            <label htmlFor={id} className="font-store-body text-store-text mb-1.5 block text-sm font-semibold">
+                {label}
+            </label>
+            <textarea
+                id={id}
+                rows={3}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error || hint ? messageId : undefined}
+                className={cn(
+                    'rounded-store font-store-body bg-store-surface text-store-text placeholder:text-store-muted w-full border-[length:var(--store-border-width)] px-3 py-2 text-base',
+                    'focus-visible:outline-store-accent focus-visible:outline-2 focus-visible:outline-offset-1',
+                    error ? 'border-red-600' : 'border-store-border',
+                    className,
+                )}
+                {...props}
+            />
+            {(error || hint) && (
+                <p id={messageId} className={cn('mt-1.5 text-sm', error ? 'font-medium text-red-600 dark:text-red-400' : 'text-store-muted')}>
+                    {error ?? hint}
+                </p>
+            )}
+        </div>
+    );
+}

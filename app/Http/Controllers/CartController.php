@@ -33,7 +33,8 @@ class CartController extends Controller
 
         // Corrige el carrito (se agotó, cambió el precio...) y avisa de lo que cambió.
         $view = $this->cart->reconcile($store);
-        $notices = $view->notices;
+        // Avisos de esta carga, más los que mandó el checkout al regresar al carrito.
+        $notices = [...(array) $request->session()->pull('cart_notices', []), ...$view->notices];
 
         // El cupón se revalida en cada carga: si ya no vale se quita y se avisa el motivo.
         [$applied, $couponNotice] = $this->revalidateCoupon($store, $view);

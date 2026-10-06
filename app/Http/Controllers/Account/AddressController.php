@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
 use App\Models\Address;
+use App\Support\AddressRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -38,26 +39,6 @@ class AddressController extends Controller
 
     private function validated(Request $request): array
     {
-        $data = $request->validate([
-            'street' => ['required', 'string', 'max:255'],
-            'neighborhood' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'state' => ['required', 'string', 'max:255'],
-            'zip' => ['required', 'regex:/^\d{5}$/'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ], [
-            'zip.regex' => 'El código postal debe tener 5 dígitos.',
-        ], [
-            'street' => 'calle y número',
-            'neighborhood' => 'colonia',
-            'city' => 'ciudad',
-            'state' => 'estado',
-            'zip' => 'código postal',
-            'notes' => 'referencias',
-        ]);
-
-        $data['notes'] = filled($data['notes'] ?? null) ? trim($data['notes']) : null;
-
-        return $data;
+        return AddressRules::clean($request->validate(AddressRules::rules(), AddressRules::messages(), AddressRules::attributes()));
     }
 }

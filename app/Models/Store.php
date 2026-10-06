@@ -16,6 +16,8 @@ class Store extends Model
         'whatsapp_phone',
         'telegram_chat_id',
         'bank_info',
+        'local_shipping_cost',
+        'national_shipping_cost',
         'about_text',
         'is_active',
     ];
@@ -23,6 +25,8 @@ class Store extends Model
     protected function casts(): array
     {
         return [
+            'local_shipping_cost' => 'decimal:2',
+            'national_shipping_cost' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

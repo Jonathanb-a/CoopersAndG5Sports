@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\StockMovementType;
 use App\Exceptions\InsufficientStockException;
 use App\Filament\Resources\Products\ProductResource;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
@@ -30,12 +31,13 @@ class StockService
         int $quantity,
         ?User $user = null,
         ?string $notes = null,
+        ?Order $order = null,
     ): StockMovement {
         if ($quantity === 0) {
             throw new InvalidArgumentException('La cantidad del movimiento no puede ser cero.');
         }
 
-        $movement = DB::transaction(function () use ($variant, $type, $quantity, $user, $notes) {
+        $movement = DB::transaction(function () use ($variant, $type, $quantity, $user, $notes, $order) {
             $locked = ProductVariant::query()->lockForUpdate()->findOrFail($variant->getKey());
 
             $newStock = $locked->stock + $quantity;
@@ -52,6 +54,7 @@ class StockService
                 'type' => $type,
                 'quantity' => $quantity,
                 'user_id' => $user?->getKey(),
+                'order_id' => $order?->getKey(),
                 'notes' => $notes,
             ]);
         });

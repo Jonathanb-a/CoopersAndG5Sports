@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Middleware\ResolveStore;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Store;
+use App\Services\CouponResult;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/** Confirmación del pedido apartado: /pedido/{numero}/gracias. Solo la ve el cliente dueño del pedido. */
+class OrderConfirmationController extends Controller
+{
+    public function __invoke(Request $request, string $number): Response
+    {
+        /** @var Store $store */
+        $store = app(ResolveStore::CONTAINER_KEY);
+
+        // De esta tienda y de este cliente; cualquier otro pedido responde 404, exista o no.
+        $order = Order::query()
+            ->where('store_id', $store->id)
+            ->where('customer_id', $request->user('customer')->id)
+            ->where('number', $number)
+            ->with(['items', 'coupon'])
+            ->firstOrFail();
+
+        return Inertia::render('order-thanks', [
+            'order' => [
+                'number' => $order->number,
+                'status' => $order->status->getLabel(),
+                'delivery_method' => $order->delivery_method->value,
+                'delivery_label' => $order->delivery_method->getLabel(),
+                'shipping_address' => $order->shipping_address,
+                'notes' => $order->notes,
+                'coupon' => $order->coupon?->code,
+                'subtotal' => $order->subtotal,
+                'discount' => $order->discount,
+                'shipping_cost' => $order->shipping_cost,
+                'total' => $order->total,
+                'expires_at' => $order->expires_at?->toIso8601String(),
+                // Fecha límite de pago ya escrita en español y en la hora de México.
+                'expires_at_text' => $order->expires_at?->timezone(config('app.timezone'))->translatedFormat('l j \d\e F \d\e Y, H:i'),
+                'items' => $order->items->map(fn (OrderItem $item) => [
+                    'id' => $item->id,
+                    'name' => $item->product_name,
+                    'size' => $item->size,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'line_total' => CouponResult::money((int) round((float) $item->unit_price * 100) * $item->quantity),
+                    'is_backorder' => $item->is_backorder,
+                ])->all(),
+            ],
+            'bankInfo' => trim((string) $store->bank_info) ?: null,
+        ]);
+    }
+}

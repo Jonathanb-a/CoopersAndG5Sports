@@ -123,6 +123,10 @@ class OrderWhatsAppTest extends TestCase
             $this->assertStringNotContainsString('7552222222', $coppers[$key]);
             $this->assertStringNotContainsString('7551111111', $g5[$key]);
         }
+
+        // El mensaje nombra a la tienda del pedido.
+        $this->assertStringStartsWith("Hola Copper's, adjunto el comprobante de transferencia de mi pedido.", $this->text($coppers['receipt_url']));
+        $this->assertStringStartsWith('Hola Sports G5, adjunto el comprobante de transferencia de mi pedido.', $this->text($g5['receipt_url']));
     }
 
     public function test_without_a_store_number_there_are_no_links()
@@ -146,7 +150,7 @@ class OrderWhatsAppTest extends TestCase
         $text = $this->text($this->links(self::COPPERS, 'CP-00042')['receipt_url']);
 
         $this->assertSame(implode("\n", [
-            'Hola, les envío el comprobante de pago de mi pedido.',
+            "Hola Copper's, adjunto el comprobante de transferencia de mi pedido.",
             '',
             'Pedido: CP-00042',
             'Nombre: Ana María Pérez',
@@ -207,7 +211,7 @@ class OrderWhatsAppTest extends TestCase
         // Nada sin codificar: ni espacios, ni saltos de línea, ni acentos, ni & o # que corten el mensaje.
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9%._~-]+$/', $encoded);
         $this->assertStringContainsString('%0A', $encoded);                 // salto de línea
-        $this->assertStringContainsString('env%C3%ADo', $encoded);         // "envío" en UTF-8
+        $this->assertStringContainsString('Hola%20Copper%27s%2C%20adjunto', $encoded); // apóstrofo, coma y espacios
         $this->assertStringContainsString('Mar%C3%ADa%20P%C3%A9rez', $encoded);
         $this->assertStringContainsString('Ni%C3%B1o%20%26%20Ni%C3%B1a%20100%25', $encoded);
         $this->assertStringContainsString('%243%2C995.00', $encoded);       // $3,995.00

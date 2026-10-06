@@ -14,11 +14,11 @@ use Illuminate\Support\Number;
  */
 class OrderWhatsAppMessage
 {
-    /** Mensaje para mandar el comprobante de pago: pedido, cliente, total, entrega y piezas sobre pedido. */
+    /** Mensaje para mandar el comprobante de pago: tienda, pedido, cliente, total, entrega y piezas sobre pedido. */
     public static function receipt(Order $order): string
     {
         $lines = [
-            'Hola, les envío el comprobante de pago de mi pedido.',
+            "Hola {$order->store->name}, adjunto el comprobante de transferencia de mi pedido.",
             '',
             "Pedido: {$order->number}",
             'Nombre: '.($order->customer?->name ?? '—'),

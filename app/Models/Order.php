@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\CancelledBy;
+use App\Enums\DeliveryAttemptResult;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Models\Concerns\BelongsToStore;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -37,6 +39,8 @@ class Order extends Model
         'paid_at',
         'payment_reference',
         'delivered_at',
+        'delivery_scheduled_date',
+        'delivery_window',
         'tracking_carrier',
         'tracking_number',
         'cancelled_at',
@@ -86,6 +90,7 @@ class Order extends Model
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'delivery_scheduled_date' => 'date',
             'cancelled_at' => 'datetime',
             'cancelled_by' => CancelledBy::class,
             'refunded_at' => 'datetime',
@@ -109,6 +114,41 @@ class Order extends Model
     public function contactPhone(): ?string
     {
         return ($this->shipping_address['phone'] ?? null) ?: $this->customer?->phone;
+    }
+
+    /** Intentos fallidos de entrega a domicilio. */
+    public function failedDeliveryAttempts(): int
+    {
+        return $this->deliveryAttempts->filter(fn (DeliveryAttempt $attempt) => $attempt->result->failed())->count();
+    }
+
+    /**
+     * «Por reprogramar»: pedido local enviado cuyo último intento de entrega falló y que todavía no
+     * tiene fecha nueva.
+     */
+    public function needsDeliveryReschedule(): bool
+    {
+        return $this->delivery_method === DeliveryMethod::Local
+            && $this->status === OrderStatus::Shipped
+            && $this->delivery_scheduled_date === null
+            && (bool) $this->deliveryAttempts->last()?->result->failed();
+    }
+
+    /** Pedidos locales enviados cuyo último intento falló y siguen sin fecha. */
+    public function scopeNeedsDeliveryReschedule(Builder $query): void
+    {
+        $lastResult = DeliveryAttempt::query()
+            ->select('result')
+            ->whereColumn('delivery_attempts.order_id', 'orders.id')
+            ->orderByDesc('attempted_at')
+            ->orderByDesc('id')
+            ->limit(1);
+
+        $query
+            ->where('orders.delivery_method', DeliveryMethod::Local->value)
+            ->where('orders.status', OrderStatus::Shipped->value)
+            ->whereNull('orders.delivery_scheduled_date')
+            ->where($lastResult, '!=', DeliveryAttemptResult::Delivered->value);
     }
 
     public function store(): BelongsTo
@@ -140,5 +180,11 @@ class Order extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('id');
+    }
+
+    /** Intentos de entrega a domicilio, del más viejo al más nuevo. */
+    public function deliveryAttempts(): HasMany
+    {
+        return $this->hasMany(DeliveryAttempt::class)->orderBy('attempted_at')->orderBy('id');
     }
 }

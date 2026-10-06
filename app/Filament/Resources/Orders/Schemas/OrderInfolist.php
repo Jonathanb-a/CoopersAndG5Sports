@@ -2,10 +2,13 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\DeliveryAttemptResult;
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Services\OrderDeliveryService;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -87,6 +90,40 @@ class OrderInfolist
                         TextEntry::make('shipping_address.state')->label('Estado'),
                         TextEntry::make('shipping_address.zip')->label('Código postal'),
                         TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—')->columnSpanFull(),
+                    ]),
+                Section::make('Entrega a domicilio')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    // También después de cambiar a recoger: los intentos que hubo se siguen viendo.
+                    ->visible(fn (Order $record) => $record->delivery_method === DeliveryMethod::Local || $record->deliveryAttempts->isNotEmpty())
+                    ->schema([
+                        TextEntry::make('delivery_scheduled_date')
+                            ->label('Entrega programada')
+                            ->date('d/m/Y')
+                            ->placeholder(fn (Order $record) => $record->needsDeliveryReschedule() ? 'Por reprogramar' : 'Sin programar')
+                            ->color(fn (Order $record) => $record->needsDeliveryReschedule() ? 'warning' : null),
+                        TextEntry::make('delivery_window')->label('Horario')->placeholder('—'),
+                        TextEntry::make('delivery_warning')
+                            ->label('Advertencia')
+                            ->columnSpanFull()
+                            ->color('danger')
+                            ->weight('bold')
+                            ->state(fn (Order $record) => "Van {$record->failedDeliveryAttempts()} intentos de entrega fallidos. Puedes cambiar el pedido a recoger en tienda.")
+                            ->visible(fn (Order $record) => OrderDeliveryService::canSwitchToPickup($record)),
+                        RepeatableEntry::make('deliveryAttempts')
+                            ->label('Intentos de entrega')
+                            ->columnSpanFull()
+                            ->columns(4)
+                            ->placeholder('Sin intentos registrados.')
+                            ->schema([
+                                TextEntry::make('attempted_at')->label('Fecha')->date('d/m/Y'),
+                                TextEntry::make('result')
+                                    ->label('Resultado')
+                                    ->badge()
+                                    ->color(fn (DeliveryAttemptResult $state) => $state->failed() ? 'danger' : 'success'),
+                                TextEntry::make('notes')->label('Nota')->placeholder('—'),
+                                TextEntry::make('user.name')->label('Registró')->placeholder('—'),
+                            ]),
                     ]),
                 Section::make('Productos')
                     ->columnSpanFull()

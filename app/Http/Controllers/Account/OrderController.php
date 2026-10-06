@@ -13,6 +13,7 @@ use App\Models\Store;
 use App\Services\CancellationRequestService;
 use App\Services\CouponResult;
 use App\Services\OrderCancellationService;
+use App\Services\OrderDeliveryService;
 use App\Support\OrderWhatsAppMessage;
 use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
@@ -68,6 +69,7 @@ class OrderController extends Controller
             'customer',
             'store',
             'statusHistories',
+            'deliveryAttempts',
         ]);
 
         $reserved = $order->status === OrderStatus::Reserved;
@@ -110,6 +112,7 @@ class OrderController extends Controller
                 'cancel' => $reserved,
                 'request_cancellation' => CancellationRequestService::canRequest($order),
             ],
+            'delivery' => $this->delivery($order),
             'cancellationRequested' => CancellationRequestService::isPending($order),
             'bankInfo' => $reserved ? (trim((string) $store->bank_info) ?: null) : null,
             'whatsapp' => [
@@ -183,6 +186,26 @@ class OrderController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Entrega a domicilio de un pedido local en curso: la fecha y el horario acordados, o el aviso de
+     * que el último intento falló. Sin notas de los intentos ni quién los registró.
+     *
+     * @return array{scheduled: ?array{date: string, window: ?string}, failed: bool, reschedule_url: ?string}
+     */
+    private function delivery(Order $order): array
+    {
+        $scheduled = OrderDeliveryService::canSchedule($order) && $order->delivery_scheduled_date !== null;
+        $failed = $order->needsDeliveryReschedule();
+
+        return [
+            'scheduled' => $scheduled
+                ? ['date' => OrderWhatsAppMessage::deliveryDate($order), 'window' => $order->delivery_window]
+                : null,
+            'failed' => $failed,
+            'reschedule_url' => $failed ? $order->store->whatsappUrl(OrderWhatsAppMessage::reschedule($order)) : null,
+        ];
     }
 
     private function back(Order $order): RedirectResponse

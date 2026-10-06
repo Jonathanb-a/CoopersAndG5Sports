@@ -148,6 +148,10 @@ class CheckoutController extends Controller
                 'description' => $labels[$method][1],
                 'cost' => CouponResult::money($cents),
                 'needs_address' => $method !== DeliveryMethod::Pickup->value,
+                // En la entrega local no se pide fecha: se acuerda después por WhatsApp.
+                'note' => $method === DeliveryMethod::Local->value
+                    ? 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega'
+                    : null,
             ];
         }
 

@@ -549,9 +549,9 @@ class CheckoutTest extends TestCase
                 ->where('cart.discount', '0.00')
                 ->has('cart.lines', 1)
                 ->where('deliveryOptions', [
-                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false],
-                    ['value' => 'local', 'label' => 'Entrega local en Zihuatanejo', 'description' => 'Te lo llevamos a tu domicilio en Zihuatanejo.', 'cost' => '80.00', 'needs_address' => true],
-                    ['value' => 'nacional', 'label' => 'Envío nacional', 'description' => 'Te lo mandamos por paquetería a cualquier parte de México.', 'cost' => '250.00', 'needs_address' => true],
+                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null],
+                    ['value' => 'local', 'label' => 'Entrega local en Zihuatanejo', 'description' => 'Te lo llevamos a tu domicilio en Zihuatanejo.', 'cost' => '80.00', 'needs_address' => true, 'note' => 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega'],
+                    ['value' => 'nacional', 'label' => 'Envío nacional', 'description' => 'Te lo mandamos por paquetería a cualquier parte de México.', 'cost' => '250.00', 'needs_address' => true, 'note' => null],
                 ])
                 ->has('addresses', 1)
                 ->where('addresses.0.street', 'Calle Hidalgo 5')

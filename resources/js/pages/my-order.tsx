@@ -45,6 +45,8 @@ interface MyOrderProps {
         timeline: { label: string; date: string }[];
     };
     can: { cancel: boolean; request_cancellation: boolean };
+    /** Entrega a domicilio (pedidos locales): fecha acordada o aviso de intento fallido. */
+    delivery: { scheduled: { date: string; window: string | null } | null; failed: boolean; reschedule_url: string | null };
     cancellationRequested: boolean;
     bankInfo: string | null;
     whatsapp: { receipt_url: string | null; question_url: string | null };
@@ -88,7 +90,7 @@ function WhatsAppButton({ href, children, primary = false }: { href: string; chi
 }
 
 /** Detalle de un pedido del cliente: estado, pago (si está apartado), líneas, entrega, historial y cancelación. */
-function MyOrderContent({ order, can, cancellationRequested, bankInfo, whatsapp, status }: MyOrderProps) {
+function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo, whatsapp, status }: MyOrderProps) {
     const { errors } = usePage<SharedData & { errors: Record<string, string> }>().props;
     const address = order.shipping_address;
     const reserved = order.status === 'apartado';
@@ -154,6 +156,26 @@ function MyOrderContent({ order, can, cancellationRequested, bankInfo, whatsapp,
                             <div className="mt-5">
                                 <WhatsAppButton href={whatsapp.receipt_url} primary>
                                     Enviar comprobante por WhatsApp
+                                </WhatsAppButton>
+                            </div>
+                        )}
+                    </Section>
+                )}
+
+                {delivery.scheduled && (
+                    <Section id="entrega-programada" title="Entrega programada">
+                        <p className="text-lg font-semibold first-letter:uppercase">{delivery.scheduled.date}</p>
+                        {delivery.scheduled.window && <p className="text-store-muted mt-1">Horario: {delivery.scheduled.window}</p>}
+                    </Section>
+                )}
+
+                {delivery.failed && (
+                    <Section id="entrega-fallida" title="No pudimos entregarte">
+                        <p>No pudimos entregarte. Te contactaremos para reprogramar.</p>
+                        {delivery.reschedule_url && (
+                            <div className="mt-4">
+                                <WhatsAppButton href={delivery.reschedule_url} primary>
+                                    Reprogramar por WhatsApp
                                 </WhatsAppButton>
                             </div>
                         )}

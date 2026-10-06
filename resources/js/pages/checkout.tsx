@@ -15,6 +15,7 @@ interface DeliveryOption {
     description: string;
     cost: string;
     needs_address: boolean;
+    note: string | null;
 }
 
 interface CheckoutProps {
@@ -193,6 +194,7 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
                                                 <span>{Number(option.cost) === 0 ? 'Gratis' : formatMoney(option.cost)}</span>
                                             </span>
                                             <span className="text-store-muted block text-sm">{option.description}</span>
+                                            {option.note && <span className="mt-1 block text-sm font-medium">{option.note}.</span>}
                                         </span>
                                     </label>
                                 ))}

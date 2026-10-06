@@ -143,3 +143,13 @@ Sensación: cancha y calle, energía, grafiti.
 - Máximo de pedidos sin pagar por cliente: shop.max_open_reservations = 3.
 - Cambios y devoluciones después de entregar se atienden por WhatsApp y se
   registran con un ajuste de stock manual (política pendiente con el cliente).
+
+## Entrega a domicilio local (fase 5)
+- Solo aplica al método local. La fecha y el horario los acuerda el admin
+  con el cliente por WhatsApp; el cliente no elige fecha en el checkout.
+- Programar entrega: pedido pagado o enviado, fecha de hoy en adelante.
+- Registrar intento: solo pedidos enviados con método local. Resultados:
+  entregado (pasa a entregado), no estaba, rechazó, dirección incorrecta
+  u otro. Un intento fallido no cambia el estado: el pedido sigue enviado,
+  se limpia la fecha y queda "por reprogramar".
+- Con 2 intentos fallidos se ofrece cambiar el método a recoger en tienda.

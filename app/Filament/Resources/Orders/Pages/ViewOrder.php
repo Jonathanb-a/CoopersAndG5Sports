@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Pages;
 
+use App\Enums\DeliveryAttemptResult;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
@@ -11,17 +12,20 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\CancellationRequestService;
 use App\Services\OrderCancellationService;
+use App\Services\OrderDeliveryService;
 use App\Services\OrderReservationService;
 use App\Services\OrderStatusService;
 use App\Support\OrderWhatsAppMessage;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 
 /**
@@ -47,6 +51,9 @@ class ViewOrder extends ViewRecord
             $this->markPaidAction(),
             $this->markShippedAction(),
             $this->markDeliveredAction(),
+            $this->scheduleDeliveryAction(),
+            $this->recordAttemptAction(),
+            $this->switchToPickupAction(),
             $this->extendAction(),
             $this->reactivateAction(),
             $this->markRefundedAction(),
@@ -125,6 +132,126 @@ class ViewOrder extends ViewRecord
             ->modalDescription('Confirma que el cliente ya recibió su pedido. Se guarda la fecha de entrega.')
             ->modalSubmitActionLabel('Sí, se entregó')
             ->action(fn () => $this->changeStatus(OrderStatus::Delivered));
+    }
+
+    /** Entrega local: fija (o cambia) la fecha y el horario acordados con el cliente por WhatsApp. */
+    private function scheduleDeliveryAction(): Action
+    {
+        $scheduled = fn (Order $record) => $record->delivery_scheduled_date !== null;
+
+        return Action::make('scheduleDelivery')
+            ->label(fn (Order $record) => $scheduled($record) ? 'Reprogramar entrega' : 'Programar entrega')
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->color('info')
+            ->visible(fn (Order $record) => OrderDeliveryService::canSchedule($record))
+            ->modalHeading(fn (Order $record) => $scheduled($record) ? 'Reprogramar entrega a domicilio' : 'Programar entrega a domicilio')
+            ->modalDescription('Captura la fecha y el horario que acordaste con el cliente por WhatsApp.')
+            ->modalSubmitActionLabel('Guardar entrega')
+            ->fillForm(fn (Order $record) => [
+                'date' => $record->delivery_scheduled_date?->toDateString(),
+                'window' => $record->delivery_window,
+            ])
+            ->schema([
+                DatePicker::make('date')
+                    ->label('Fecha de entrega')
+                    ->required()
+                    ->minDate(today())
+                    ->rule('after_or_equal:today')
+                    ->validationMessages(['after_or_equal' => 'La fecha de entrega no puede ser anterior a hoy.']),
+                TextInput::make('window')
+                    ->label('Horario')
+                    ->placeholder('Entre 4 y 6 pm')
+                    ->required()
+                    ->maxLength(255),
+            ])
+            ->action(function (array $data, Order $record) {
+                try {
+                    $order = app(OrderDeliveryService::class)->schedule($record, $data['date'], $data['window'], auth()->user());
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo programar la entrega')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Entrega programada para el '.$order->delivery_scheduled_date->format('d/m/Y'))->send();
+            });
+    }
+
+    /** Entrega local: lo que pasó al llevar el pedido. «Entregado» cierra el pedido; lo demás lo deja por reprogramar. */
+    private function recordAttemptAction(): Action
+    {
+        return Action::make('recordAttempt')
+            ->label('Registrar intento')
+            ->icon(Heroicon::OutlinedClipboardDocumentCheck)
+            ->color('primary')
+            ->visible(fn (Order $record) => OrderDeliveryService::canRecordAttempt($record))
+            ->modalHeading('Registrar intento de entrega')
+            ->modalDescription('Si se entregó, el pedido pasa a entregado. Si no, queda por reprogramar.')
+            ->modalSubmitActionLabel('Registrar intento')
+            ->schema([
+                Select::make('result')
+                    ->label('Resultado')
+                    ->options(DeliveryAttemptResult::class)
+                    ->required()
+                    ->native(false)
+                    ->live(),
+                Textarea::make('notes')
+                    ->label('Nota')
+                    ->rows(2)
+                    ->maxLength(500)
+                    ->required(fn (Get $get) => self::isOther($get('result')))
+                    ->validationMessages(['required' => 'Escribe una nota para explicar qué pasó en el intento.']),
+                DatePicker::make('attempted_at')
+                    ->label('Fecha del intento')
+                    ->default(today()->toDateString())
+                    ->required()
+                    ->maxDate(today())
+                    ->rule('before_or_equal:today')
+                    ->validationMessages(['before_or_equal' => 'La fecha del intento no puede ser futura.']),
+            ])
+            ->action(function (array $data, Order $record) {
+                $result = $data['result'] instanceof DeliveryAttemptResult ? $data['result'] : DeliveryAttemptResult::from($data['result']);
+
+                try {
+                    app(OrderDeliveryService::class)->recordAttempt($record, $result, $data['notes'] ?? null, auth()->user(), $data['attempted_at']);
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se registró el intento')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title($result->failed() ? 'Intento registrado: el pedido queda por reprogramar' : 'Pedido entregado')->send();
+            });
+    }
+
+    private static function isOther(mixed $result): bool
+    {
+        return ($result instanceof DeliveryAttemptResult ? $result->value : $result) === DeliveryAttemptResult::Other->value;
+    }
+
+    /** Con 2 o más intentos fallidos: el cliente pasa por su pedido a la tienda. No cambia los totales. */
+    private function switchToPickupAction(): Action
+    {
+        return Action::make('switchToPickup')
+            ->label('Cambiar a recoger en tienda')
+            ->icon(Heroicon::OutlinedBuildingStorefront)
+            ->color('warning')
+            ->visible(fn (Order $record) => OrderDeliveryService::canSwitchToPickup($record))
+            ->requiresConfirmation()
+            ->modalHeading('Cambiar a recoger en tienda')
+            ->modalDescription('El pedido deja de ser entrega a domicilio y el cliente pasa por él a la tienda. Los totales no cambian; avísale por WhatsApp.')
+            ->modalSubmitActionLabel('Sí, cambiar a recoger')
+            ->action(function (Order $record) {
+                try {
+                    app(OrderDeliveryService::class)->switchToPickup($record, auth()->user());
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo cambiar la entrega')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('El pedido ahora es para recoger en tienda')->send();
+            });
     }
 
     /** Abre WhatsApp con el aviso del estado actual. No manda nada solo: el personal revisa y envía. */

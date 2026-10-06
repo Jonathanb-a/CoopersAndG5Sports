@@ -153,3 +153,11 @@ Sensación: cancha y calle, energía, grafiti.
   u otro. Un intento fallido no cambia el estado: el pedido sigue enviado,
   se limpia la fecha y queda "por reprogramar".
 - Con 2 intentos fallidos se ofrece cambiar el método a recoger en tienda.
+
+## Venta de mostrador (fase 5)
+- Canal mostrador: venta presencial. Nace como entregado y pagado, sin cliente
+  obligatorio, método de entrega recoger, sin envío ni sobre pedido.
+- Descuenta stock con StockService (tipo venta_mostrador), con lockForUpdate.
+- Método de pago: efectivo, transferencia o tarjeta (orders.payment_method).
+- Excepción a "entregado es final": el owner puede anular una venta de
+  mostrador (error de captura), que regresa el stock. Solo canal mostrador.

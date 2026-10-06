@@ -7,6 +7,7 @@ use App\Enums\DeliveryAttemptResult;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToStore;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +41,7 @@ class Order extends Model
         'coupon_id',
         'expires_at',
         'paid_at',
+        'payment_method',
         'payment_reference',
         'delivered_at',
         'delivery_scheduled_date',
@@ -92,6 +94,7 @@ class Order extends Model
             'total' => 'decimal:2',
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
+            'payment_method' => PaymentMethod::class,
             'delivered_at' => 'datetime',
             'delivery_scheduled_date' => 'date',
             'cancelled_at' => 'datetime',

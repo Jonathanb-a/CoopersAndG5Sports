@@ -81,6 +81,39 @@ class OrderCancellationService
         return $order->refresh();
     }
 
+    /**
+     * Anula una venta de mostrador: la única forma de cancelar un pedido entregado, y solo para el
+     * canal mostrador. Solo el owner; exige motivo. Regresa las piezas al inventario (tipo
+     * cancelacion) y, como el dinero se devuelve en el momento, queda registrado como reembolsado.
+     *
+     * @throws InvalidOrderTransitionException
+     */
+    public function voidCounterSale(Order $order, User $actor, ?string $reason): Order
+    {
+        $reason = filled($reason) ? trim($reason) : null;
+
+        if ($reason === null) {
+            throw new InvalidOrderTransitionException('Escribe el motivo para anular la venta.');
+        }
+
+        DB::transaction(function () use ($order, $actor, $reason) {
+            // Con el pedido bloqueado: un doble clic encuentra la venta ya anulada y no regresa el stock otra vez.
+            $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            if ($actor->role !== UserRole::Owner) {
+                throw new InvalidOrderTransitionException("Solo el dueño puede anular la venta {$locked->number}.");
+            }
+
+            $this->statuses->voidCounterSale($locked, $actor, $reason);
+
+            $locked->refresh()->update(['refunded_at' => now()]);
+
+            $this->restock($locked, $actor);
+        });
+
+        return $order->refresh();
+    }
+
     /** Regresa las piezas de las líneas normales. Las de sobre pedido nunca descontaron stock. */
     private function restock(Order $order, ?User $user): void
     {

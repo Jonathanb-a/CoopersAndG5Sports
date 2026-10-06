@@ -40,6 +40,7 @@ class OrderInfolist
                             ->placeholder('—')
                             ->color(fn (Order $record) => $record->status === OrderStatus::Reserved && $record->expires_at?->isPast() ? 'danger' : null),
                         TextEntry::make('paid_at')->label('Pagado')->dateTime()->placeholder('—'),
+                        TextEntry::make('payment_method')->label('Método de pago')->placeholder('—'),
                         TextEntry::make('payment_reference')->label('Referencia de pago')->placeholder('—'),
                         TextEntry::make('delivered_at')->label('Entregado')->dateTime()->placeholder('—'),
                         TextEntry::make('tracking_carrier')->label('Paquetería')->placeholder('—'),

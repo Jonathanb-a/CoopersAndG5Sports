@@ -5,13 +5,16 @@ namespace App\Services;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\StockMovementType;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -176,6 +179,152 @@ class OrderService
         $this->coupons->remove();
 
         return $order;
+    }
+
+    /**
+     * Venta de mostrador: el cliente paga y se lleva las piezas en ese momento, así que el pedido nace
+     * entregado, sin cliente, y descuenta el stock (venta_mostrador), todo en una sola transacción con
+     * las tallas bloqueadas. No hay sobre pedido: sin stock suficiente no se registra nada.
+     *
+     * Los precios se leen de la base de datos; de cada línea solo se toman la talla y la cantidad.
+     *
+     * @param  list<array{variant_id: int|string, quantity: int|string}>  $lines
+     * @param  string|int|float|null  $discount  descuento general en pesos; exige nota y no puede superar el subtotal
+     * @param  string|null  $note  nota de la venta (obligatoria si hay descuento)
+     *
+     * @throws CounterSaleException
+     */
+    public function placeCounterSale(
+        Store $store,
+        User $user,
+        array $lines,
+        PaymentMethod $paymentMethod,
+        string|int|float|null $discount = null,
+        ?string $note = null,
+    ): Order {
+        // Con la tienda recién leída: que siga activa y que quien vende la atienda.
+        if (! $user->canAccessTenant(Store::query()->findOrFail($store->id))) {
+            throw new CounterSaleException("No atiendes la tienda {$store->name}.");
+        }
+
+        // Una talla repetida en dos líneas es una sola línea con la suma.
+        $quantities = [];
+
+        foreach ($lines as $line) {
+            $variantId = (int) ($line['variant_id'] ?? 0);
+            $quantity = filter_var($line['quantity'] ?? null, FILTER_VALIDATE_INT);
+
+            if ($variantId < 1) {
+                throw new CounterSaleException('Elige el producto y la talla de cada línea.');
+            }
+
+            if ($quantity === false || $quantity < 1) {
+                throw new CounterSaleException('La cantidad de cada línea debe ser de al menos 1 pieza.');
+            }
+
+            $quantities[$variantId] = ($quantities[$variantId] ?? 0) + $quantity;
+        }
+
+        if ($quantities === []) {
+            throw new CounterSaleException('Agrega al menos un producto a la venta.');
+        }
+
+        $note = filled($note) ? trim($note) : null;
+        $discountCents = $this->toCents(is_numeric($discount) ? $discount : 0);
+
+        if ($discount !== null && $discount !== '' && (! is_numeric($discount) || $discountCents < 0)) {
+            throw new CounterSaleException('El descuento debe ser un monto en pesos, de 0 en adelante.');
+        }
+
+        if ($discountCents > 0 && $note === null) {
+            throw new CounterSaleException('Escribe una nota que explique el descuento.');
+        }
+
+        try {
+            return DB::transaction(function () use ($store, $user, $quantities, $paymentMethod, $discountCents, $note) {
+                // Mismo orden de bloqueos que en la tienda en línea: tienda (número consecutivo) y tallas.
+                Store::query()->whereKey($store->id)->lockForUpdate()->first();
+
+                $variants = ProductVariant::query()
+                    ->whereIn('id', array_keys($quantities))
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                $products = Product::withoutGlobalScopes()
+                    ->whereIn('id', $variants->pluck('product_id'))
+                    ->get()
+                    ->keyBy('id');
+
+                $subtotal = 0;
+                $items = [];
+
+                foreach ($quantities as $variantId => $quantity) {
+                    $variant = $variants->get($variantId);
+                    $product = $variant ? $products->get($variant->product_id) : null;
+
+                    // Borrada, de otra tienda o apagada: para el mostrador es lo mismo, no se vende.
+                    if ($product === null || $product->store_id !== $store->id || ! $product->is_active) {
+                        throw new CounterSaleException("Una de las tallas elegidas no está a la venta en {$store->name}.");
+                    }
+
+                    if ($variant->stock < $quantity) {
+                        throw new CounterSaleException(
+                            "No hay stock suficiente de {$product->name} (talla {$variant->size}): "
+                            .($variant->stock === 1 ? 'queda 1 pieza' : "quedan {$variant->stock} piezas")." y la venta pide {$quantity}."
+                        );
+                    }
+
+                    $subtotal += $this->toCents($product->price) * $quantity;
+                    $items[] = [$variant, $quantity, [
+                        'product_variant_id' => $variant->id,
+                        'product_name' => $product->name,
+                        'size' => $variant->size,
+                        'unit_price' => $product->price,
+                        'quantity' => $quantity,
+                        'is_backorder' => false,
+                    ]];
+                }
+
+                if ($discountCents > $subtotal) {
+                    throw new CounterSaleException(
+                        'El descuento ('.CouponResult::money($discountCents).') no puede ser mayor que el subtotal ('.CouponResult::money($subtotal).').'
+                    );
+                }
+
+                $order = Order::create([
+                    'store_id' => $store->id,
+                    'customer_id' => null,
+                    'number' => $this->nextNumber($store),
+                    'channel' => OrderChannel::Counter,
+                    'status' => OrderStatus::Delivered,
+                    'delivery_method' => DeliveryMethod::Pickup,
+                    'subtotal' => CouponResult::money($subtotal),
+                    'discount' => CouponResult::money($discountCents),
+                    'shipping_cost' => CouponResult::money(0),
+                    'total' => CouponResult::money($subtotal - $discountCents),
+                    'payment_method' => $paymentMethod,
+                    'paid_at' => now(),
+                    'delivered_at' => now(),
+                    'internal_notes' => $note,
+                ]);
+
+                // Primer renglón del historial: nace entregado, lo registró quien atendió.
+                $this->statuses->recordInitial($order, $user, trim("Venta de mostrador. Pago: {$paymentMethod->getLabel()}. ".($note ?? '')));
+
+                foreach ($items as [$variant, $quantity, $item]) {
+                    $order->items()->create($item);
+
+                    $this->stock->change($variant, StockMovementType::CounterSale, -$quantity, $user, "Venta de mostrador {$order->number}", $order);
+                }
+
+                return $order;
+            });
+        } catch (InsufficientStockException) {
+            // No debería pasar (las tallas están bloqueadas y recién revisadas), pero el stock nunca queda negativo.
+            throw new CounterSaleException('El stock cambió mientras se registraba la venta. Revisa las piezas e inténtalo de nuevo.');
+        }
     }
 
     /**

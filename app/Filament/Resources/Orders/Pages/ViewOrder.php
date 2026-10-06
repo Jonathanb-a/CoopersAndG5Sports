@@ -62,6 +62,7 @@ class ViewOrder extends ViewRecord
             $this->editNotesAction(),
             $this->editAddressAction(),
             $this->cancelAction(),
+            $this->voidSaleAction(),
         ];
     }
 
@@ -319,6 +320,38 @@ class ViewOrder extends ViewRecord
                 }
 
                 Notification::make()->success()->title('Pedido cancelado')->send();
+            });
+    }
+
+    /** Anular una venta de mostrador: la única forma de cancelar un pedido entregado. Solo el owner. */
+    private function voidSaleAction(): Action
+    {
+        return Action::make('voidSale')
+            ->label('Anular venta')
+            ->icon(Heroicon::OutlinedArrowUturnLeft)
+            ->color('danger')
+            ->visible(fn (Order $record) => OrderStatusService::canVoid($record) && auth()->user()?->role === UserRole::Owner)
+            ->requiresConfirmation()
+            ->modalHeading('Anular venta de mostrador')
+            ->modalDescription('La venta queda cancelada y sus piezas regresan al inventario. Devuélvele su dinero al cliente. Esto no se puede deshacer.')
+            ->modalSubmitActionLabel('Sí, anular venta')
+            ->schema([
+                Textarea::make('reason')
+                    ->label('Motivo')
+                    ->required()
+                    ->rows(2)
+                    ->maxLength(500),
+            ])
+            ->action(function (array $data, Order $record) {
+                try {
+                    app(OrderCancellationService::class)->voidCounterSale($record, auth()->user(), $data['reason']);
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo anular la venta')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Venta anulada')->send();
             });
     }
 

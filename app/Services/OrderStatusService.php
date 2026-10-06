@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CancelledBy;
 use App\Enums\DeliveryMethod;
+use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\Customer;
@@ -108,6 +109,40 @@ class OrderStatusService
         });
 
         return $order->refresh();
+    }
+
+    /**
+     * Única excepción a «entregado es final»: anular una venta de mostrador. Aquí solo se cambia el
+     * estado y se guardan los datos de la cancelación; regresar las piezas es trabajo de
+     * OrderCancellationService::voidCounterSale().
+     *
+     * @throws InvalidOrderTransitionException
+     */
+    public function voidCounterSale(Order $order, User $actor, string $reason): Order
+    {
+        DB::transaction(function () use ($order, $actor, $reason) {
+            $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            if (! self::canVoid($locked)) {
+                throw new InvalidOrderTransitionException(
+                    "El pedido {$locked->number} no se puede anular: solo las ventas de mostrador entregadas."
+                );
+            }
+
+            $locked->status = OrderStatus::Cancelled;
+            $this->markCancelled($locked, $actor, trim($reason));
+
+            Order::withStatusChange(fn () => $locked->save());
+
+            $this->record($locked, OrderStatus::Delivered, OrderStatus::Cancelled, $actor, 'Venta anulada: '.trim($reason));
+        });
+
+        return $order->refresh();
+    }
+
+    public static function canVoid(Order $order): bool
+    {
+        return $order->channel === OrderChannel::Counter && $order->status === OrderStatus::Delivered;
     }
 
     public static function canReactivate(Order $order): bool

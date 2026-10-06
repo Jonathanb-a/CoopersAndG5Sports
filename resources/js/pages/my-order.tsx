@@ -294,7 +294,21 @@ function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo,
                     </Section>
                 )}
 
-                <CancelBox number={order.number} can={can} requested={cancellationRequested} questionUrl={whatsapp.question_url} />
+                <CancelBox number={order.number} can={can} />
+
+                {/* La duda por WhatsApp está siempre, en cualquier estado del pedido. */}
+                <Section id="ayuda" title="¿Necesitas ayuda?">
+                    <p className="text-store-muted text-sm">
+                        {cancellationRequested
+                            ? 'Si quieres agregar algo a tu solicitud, escríbenos por WhatsApp.'
+                            : 'Para dudas, cambios o devoluciones, escríbenos por WhatsApp.'}
+                    </p>
+                    {whatsapp.question_url && (
+                        <div className="mt-4">
+                            <WhatsAppButton href={whatsapp.question_url}>Tengo una duda sobre mi pedido</WhatsAppButton>
+                        </div>
+                    )}
+                </Section>
             </div>
         </Container>
     );
@@ -303,15 +317,13 @@ function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo,
 interface CancelBoxProps {
     number: string;
     can: MyOrderProps['can'];
-    requested: boolean;
-    questionUrl: string | null;
 }
 
 /**
  * Apartado: cancelar (con confirmación y motivo opcional). Pagado: solo solicitar la cancelación.
- * Enviado, entregado o cancelado: sin botón de cancelar, solo WhatsApp.
+ * Enviado, entregado o cancelado: nada; queda la sección de ayuda por WhatsApp, que va siempre.
  */
-function CancelBox({ number, can, requested, questionUrl }: CancelBoxProps) {
+function CancelBox({ number, can }: CancelBoxProps) {
     const [open, setOpen] = useState(false);
     const cancelForm = useForm({ reason: '' });
     const requestForm = useForm({ note: '' });
@@ -400,19 +412,5 @@ function CancelBox({ number, can, requested, questionUrl }: CancelBoxProps) {
         );
     }
 
-    // Con la solicitud ya enviada el aviso «Solicitud en revisión» va arriba; aquí solo queda WhatsApp.
-    return (
-        <Section id="ayuda" title="¿Necesitas ayuda?">
-            <p className="text-store-muted text-sm">
-                {requested
-                    ? 'Si quieres agregar algo a tu solicitud, escríbenos por WhatsApp.'
-                    : 'Para cambios o devoluciones, escríbenos por WhatsApp.'}
-            </p>
-            {questionUrl && (
-                <div className="mt-4">
-                    <WhatsAppButton href={questionUrl}>Escribir por WhatsApp</WhatsAppButton>
-                </div>
-            )}
-        </Section>
-    );
+    return null;
 }

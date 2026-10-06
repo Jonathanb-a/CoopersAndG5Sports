@@ -137,9 +137,11 @@ class OrderWhatsAppMessage
         return $message === null ? null : WhatsAppLink::url($order->contactPhone(), $message);
     }
 
-    /** Mensaje corto para preguntar algo del pedido. */
+    /** Mensaje corto para preguntar algo del pedido. Si está cancelado lo dice, para que la tienda lo sepa de entrada. */
     public static function question(Order $order): string
     {
-        return "Hola, tengo una duda sobre mi pedido {$order->number}.";
+        $cancelled = $order->status === OrderStatus::Cancelled ? ' (cancelado)' : '';
+
+        return "Hola, tengo una duda sobre mi pedido {$order->number}{$cancelled}.";
     }
 }

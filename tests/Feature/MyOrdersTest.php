@@ -522,6 +522,55 @@ class MyOrdersTest extends TestCase
 
     // ---- Panel: la solicitud ---------------------------------------------------------------------
 
+    // ---- Botón de duda por WhatsApp: siempre, en cualquier estado ---------------------------------
+
+    public function test_the_question_button_is_there_in_every_status_with_the_stores_whatsapp()
+    {
+        foreach (OrderStatus::cases() as $position => $status) {
+            $number = 'CP-0000'.($position + 1);
+            $this->order($this->coppers, $this->ana, $number, $status);
+
+            $text = $status === OrderStatus::Cancelled
+                ? "Hola, tengo una duda sobre mi pedido {$number} (cancelado)."
+                : "Hola, tengo una duda sobre mi pedido {$number}.";
+
+            $this->assertSame(
+                'https://wa.me/527551111111?text='.rawurlencode($text),
+                $this->props(self::COPPERS."/mi-cuenta/pedidos/{$number}")['whatsapp']['question_url'],
+                "Estado {$status->value}",
+            );
+        }
+
+        $this->assertCount(5, OrderStatus::cases());
+
+        // En la otra tienda sale con el WhatsApp de esa tienda.
+        $this->order($this->g5, $this->ana, 'G5-00001', OrderStatus::Paid);
+        $this->assertStringStartsWith('https://wa.me/527552222222?text=', $this->props(self::G5.'/mi-cuenta/pedidos/G5-00001')['whatsapp']['question_url']);
+    }
+
+    public function test_without_a_store_whatsapp_there_is_no_question_button_in_any_status()
+    {
+        $this->coppers->update(['whatsapp_phone' => null]);
+
+        foreach (OrderStatus::cases() as $position => $status) {
+            $number = 'CP-0000'.($position + 1);
+            $this->order($this->coppers, $this->ana, $number, $status);
+
+            $props = $this->props(self::COPPERS."/mi-cuenta/pedidos/{$number}");
+
+            $this->assertSame(['receipt_url' => null, 'question_url' => null], $props['whatsapp'], "Estado {$status->value}");
+        }
+    }
+
+    public function test_the_question_of_someone_elses_order_or_of_the_other_store_is_not_reachable()
+    {
+        $this->order($this->coppers, $this->luis, 'CP-00001', OrderStatus::Cancelled);
+        $this->order($this->g5, $this->ana, 'G5-00001', OrderStatus::Delivered);
+
+        $this->asAna()->get(self::COPPERS.'/mi-cuenta/pedidos/CP-00001')->assertNotFound();
+        $this->asAna()->get(self::COPPERS.'/mi-cuenta/pedidos/G5-00001')->assertNotFound();
+    }
+
     private function panelAs(User $user, Store $store): void
     {
         $this->actingAs($user, 'web');

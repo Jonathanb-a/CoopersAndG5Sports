@@ -6,7 +6,7 @@ import { ProductGallery } from '@/components/store/product-gallery';
 import { Reveal, ScrollReveal } from '@/components/store/reveal';
 import { SectionHeading } from '@/components/store/section-heading';
 import { SizeSelector } from '@/components/store/size-selector';
-import { formatMoney } from '@/lib/store';
+import { formatMoney, whatsappUrl } from '@/lib/store';
 import StoreLayout from '@/Themes';
 import { type ProductDetail, type SharedData, type StoreProduct } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -75,7 +75,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
     ]
         .filter(Boolean)
         .join(' ');
-    const whatsappHref = whatsapp.url ? `${whatsapp.url}?text=${encodeURIComponent(`${message}.\n${whatsapp.product_url}`)}` : null;
+    const whatsappHref = whatsapp.url ? whatsappUrl(whatsapp.url, `${message}.\n${whatsapp.product_url}`) : null;
 
     const backorderNotice = chosen?.status === 'backorder';
 

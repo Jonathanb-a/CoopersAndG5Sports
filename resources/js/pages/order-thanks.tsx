@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import StoreLayout from '@/Themes';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { CircleCheck } from 'lucide-react';
+import { CircleCheck, MessageCircle } from 'lucide-react';
 
 interface OrderItem {
     id: number;
@@ -37,6 +37,8 @@ interface OrderThanksProps {
         items: OrderItem[];
     };
     bankInfo: string | null;
+    /** Enlaces wa.me de la tienda del pedido con el mensaje ya escrito; null si la tienda no tiene WhatsApp. */
+    whatsapp: { receipt_url: string | null; question_url: string | null };
 }
 
 export default function OrderThanks(props: OrderThanksProps) {
@@ -51,7 +53,7 @@ export default function OrderThanks(props: OrderThanksProps) {
 }
 
 /** Confirmación del pedido apartado: número, cómo pagar por transferencia, fecha límite y resumen. */
-function OrderThanksContent({ order, bankInfo }: OrderThanksProps) {
+function OrderThanksContent({ order, bankInfo, whatsapp }: OrderThanksProps) {
     const address = order.shipping_address;
 
     return (
@@ -92,7 +94,34 @@ function OrderThanksContent({ order, bankInfo }: OrderThanksProps) {
                                 . Después de esa hora el apartado se cancela y las piezas vuelven a la venta.
                             </li>
                         )}
+                        {whatsapp.receipt_url && <li>Mándanos tu comprobante por WhatsApp para confirmar tu pago.</li>}
                     </ol>
+
+                    {(whatsapp.receipt_url || whatsapp.question_url) && (
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                            {whatsapp.receipt_url && (
+                                <a
+                                    href={whatsapp.receipt_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}
+                                >
+                                    <MessageCircle className="size-5" aria-hidden="true" />
+                                    Enviar comprobante por WhatsApp
+                                </a>
+                            )}
+                            {whatsapp.question_url && (
+                                <a
+                                    href={whatsapp.question_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full sm:w-auto')}
+                                >
+                                    Tengo dudas
+                                </a>
+                            )}
+                        </div>
+                    )}
                 </section>
 
                 <section aria-labelledby="resumen" className="store-surface p-5 sm:p-7">

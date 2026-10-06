@@ -5,15 +5,10 @@ export function formatMoney(amount: number | string): string {
     return pesos.format(Number(amount));
 }
 
-/** Enlace de WhatsApp. Un número de 10 dígitos se toma como mexicano (+52). */
-export function whatsappUrl(phone: string, message?: string): string | null {
-    const digits = phone.replace(/\D/g, '');
-
-    if (digits.length < 10) {
-        return null;
-    }
-
-    const international = digits.length === 10 ? `52${digits}` : digits;
-
-    return `https://wa.me/${international}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+/**
+ * Agrega un mensaje prellenado a un enlace de WhatsApp que ya armó el servidor (https://wa.me/52...).
+ * El teléfono no se limpia aquí: eso lo hace App\Support\WhatsAppLink.
+ */
+export function whatsappUrl(baseUrl: string, message?: string): string {
+    return message ? `${baseUrl}?text=${encodeURIComponent(message)}` : baseUrl;
 }

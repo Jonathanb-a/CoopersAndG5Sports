@@ -38,6 +38,8 @@ export interface Store {
     slug: string;
     theme: string | null;
     whatsapp_phone: string | null;
+    /** Enlace wa.me de la tienda, ya con el número limpio (lo arma el servidor). */
+    whatsapp_url: string | null;
 }
 
 export interface StoreCategory {

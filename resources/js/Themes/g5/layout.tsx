@@ -108,7 +108,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                             </ul>
                         </nav>
                         <WhatsAppLink
-                            phone={store.whatsapp_phone}
+                            url={store.whatsapp_url}
                             className="text-store-link mt-6 inline-flex items-center gap-2 font-bold underline-offset-4 hover:underline"
                         />
                     </MobileMenu>
@@ -125,7 +125,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                             </div>
                             <div className="sm:text-right">
                                 <WhatsAppLink
-                                    phone={store.whatsapp_phone}
+                                    url={store.whatsapp_url}
                                     className="store-transition store-lift bg-store-action text-store-action-text hover:bg-store-action-hover inline-flex h-12 items-center gap-2 border-[length:var(--store-border-width)] border-transparent px-6 font-bold shadow-(--store-shadow)"
                                 />
                             </div>

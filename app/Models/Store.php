@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\WhatsAppLink;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,12 +32,10 @@ class Store extends Model
         ];
     }
 
-    /** Número de WhatsApp en formato internacional, solo dígitos. Un número de 10 dígitos se toma como mexicano (+52). */
-    public function whatsappNumber(): ?string
+    /** Enlace de WhatsApp de la tienda (wa.me), con un mensaje prellenado opcional. Null si no tiene número. */
+    public function whatsappUrl(?string $message = null): ?string
     {
-        $digits = preg_replace('/\D/', '', (string) $this->whatsapp_phone);
-
-        return strlen($digits) < 10 ? null : (strlen($digits) === 10 ? '52'.$digits : $digits);
+        return WhatsAppLink::url($this->whatsapp_phone, $message);
     }
 
     public function users(): BelongsToMany

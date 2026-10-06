@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Store;
 use App\Services\CouponResult;
+use App\Support\OrderWhatsAppMessage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +25,13 @@ class OrderConfirmationController extends Controller
             ->where('store_id', $store->id)
             ->where('customer_id', $request->user('customer')->id)
             ->where('number', $number)
-            ->with(['items', 'coupon'])
+            ->with([
+                'items.productVariant' => fn ($query) => $query->withTrashed()
+                    ->with(['product' => fn ($product) => $product->withoutGlobalScope('store')->withTrashed()]),
+                'coupon',
+                'customer',
+                'store',
+            ])
             ->firstOrFail();
 
         return Inertia::render('order-thanks', [
@@ -54,6 +61,11 @@ class OrderConfirmationController extends Controller
                 ])->all(),
             ],
             'bankInfo' => trim((string) $store->bank_info) ?: null,
+            // WhatsApp de la tienda del pedido, con el mensaje ya escrito. Null si la tienda no tiene número.
+            'whatsapp' => [
+                'receipt_url' => $order->store->whatsappUrl(OrderWhatsAppMessage::receipt($order)),
+                'question_url' => $order->store->whatsappUrl(OrderWhatsAppMessage::question($order)),
+            ],
         ]);
     }
 }

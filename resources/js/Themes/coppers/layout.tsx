@@ -117,7 +117,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                             </ul>
                         </nav>
                         <WhatsAppLink
-                            phone={store.whatsapp_phone}
+                            url={store.whatsapp_url}
                             className="text-store-link mt-6 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
                         />
                     </MobileMenu>
@@ -135,7 +135,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                             <div className="sm:text-right">
                                 <p className="text-store-muted text-xs font-medium tracking-[0.18em] uppercase">Contacto</p>
                                 <WhatsAppLink
-                                    phone={store.whatsapp_phone}
+                                    url={store.whatsapp_url}
                                     className="text-store-link mt-3 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
                                 />
                             </div>

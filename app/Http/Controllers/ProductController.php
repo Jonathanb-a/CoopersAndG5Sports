@@ -55,7 +55,7 @@ class ProductController extends Controller
             ],
             'related' => $this->related($product, $store),
             'whatsapp' => [
-                'url' => ($number = $store->whatsappNumber()) ? "https://wa.me/{$number}" : null,
+                'url' => $store->whatsappUrl(),
                 'product_url' => $url,
             ],
         ])->withViewData(['meta' => $this->meta($product, $store, $url, $images[0] ?? null)]);

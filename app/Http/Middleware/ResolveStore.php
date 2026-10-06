@@ -31,6 +31,7 @@ class ResolveStore
             'slug' => $store->slug,
             'theme' => $store->theme,
             'whatsapp_phone' => $store->whatsapp_phone,
+            'whatsapp_url' => $store->whatsappUrl(),
         ]);
 
         // Menú de categorías: solo las que tienen al menos un producto activo (y sin borrar).

@@ -20,6 +20,8 @@ class OrdersTable
 
     public const CANCELLATION_REQUESTED = 'Solicitó cancelar';
 
+    public const REFUND_PENDING = 'Reembolso pendiente';
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -57,7 +59,11 @@ class OrdersTable
                     ->label('Avisos')
                     ->state(fn (Order $record) => self::marks($record))
                     ->badge()
-                    ->color(fn (string $state) => $state === self::BACKORDER ? 'info' : 'danger')
+                    ->color(fn (string $state) => match ($state) {
+                        self::BACKORDER => 'info',
+                        self::REFUND_PENDING => 'warning',
+                        default => 'danger',
+                    })
                     ->placeholder('—'),
                 TextColumn::make('delivery_method')
                     ->label('Entrega')
@@ -98,6 +104,13 @@ class OrdersTable
                     ->label('Solicitud de cancelación')
                     ->toggle()
                     ->query(fn (Builder $query) => $query->whereNotNull('cancellation_requested_at')),
+                Filter::make('refund_pending')
+                    ->label('Reembolso pendiente')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query
+                        ->where('status', OrderStatus::Cancelled->value)
+                        ->whereNotNull('paid_at')
+                        ->whereNull('refunded_at')),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -113,6 +126,7 @@ class OrdersTable
             $order->has_backorder ? self::BACKORDER : null,
             // La solicitud deja de importar cuando el pedido ya se canceló.
             $order->cancellation_requested_at && $order->status !== OrderStatus::Cancelled ? self::CANCELLATION_REQUESTED : null,
+            $order->refundPending() ? self::REFUND_PENDING : null,
         ]));
     }
 }

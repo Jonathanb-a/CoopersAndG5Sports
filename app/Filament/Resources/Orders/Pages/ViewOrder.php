@@ -4,12 +4,19 @@ namespace App\Filament\Resources\Orders\Pages;
 
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
+use App\Enums\UserRole;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\Order;
+use App\Models\User;
+use App\Services\OrderCancellationService;
+use App\Services\OrderReservationService;
 use App\Services\OrderStatusService;
 use App\Support\OrderWhatsAppMessage;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -24,15 +31,28 @@ class ViewOrder extends ViewRecord
 {
     protected static string $resource = OrderResource::class;
 
+    public const CANCEL_REASONS = [
+        'Cliente no pagó',
+        'Cliente pidió cancelar',
+        'Sin existencia real',
+        'Producto dañado',
+        'Error de captura',
+        'Otro',
+    ];
+
     protected function getHeaderActions(): array
     {
         return [
             $this->markPaidAction(),
             $this->markShippedAction(),
             $this->markDeliveredAction(),
+            $this->extendAction(),
+            $this->reactivateAction(),
+            $this->markRefundedAction(),
             $this->whatsappAction(),
             $this->editNotesAction(),
             $this->editAddressAction(),
+            $this->cancelAction(),
         ];
     }
 
@@ -115,6 +135,148 @@ class ViewOrder extends ViewRecord
             ->visible(fn (Order $record) => OrderWhatsAppMessage::statusNoticeUrl($record) !== null)
             ->url(fn (Order $record) => OrderWhatsAppMessage::statusNoticeUrl($record))
             ->openUrlInNewTab();
+    }
+
+    /** Cancelar: el staff puede cancelar un apartado; un pedido pagado solo lo cancela el owner. */
+    private function cancelAction(): Action
+    {
+        $paid = fn (Order $record) => $record->status === OrderStatus::Paid;
+
+        return Action::make('cancel')
+            ->label('Cancelar pedido')
+            ->icon(Heroicon::OutlinedXCircle)
+            ->color('danger')
+            ->visible(fn (Order $record) => self::canCancel($record, auth()->user()))
+            ->requiresConfirmation()
+            ->modalHeading('Cancelar pedido')
+            ->modalDescription(fn (Order $record) => $paid($record)
+                ? 'Este pedido ya está pagado. Al cancelarlo hay que devolverle su dinero al cliente por transferencia.'
+                : 'El pedido quedará cancelado. Esto no se puede deshacer.')
+            ->modalSubmitActionLabel('Sí, cancelar pedido')
+            ->schema(fn (Order $record) => [
+                Select::make('reason')
+                    ->label('Motivo')
+                    ->options(array_combine(self::CANCEL_REASONS, self::CANCEL_REASONS))
+                    ->required()
+                    ->native(false),
+                Textarea::make('note')
+                    ->label('Nota')
+                    ->rows(2)
+                    ->maxLength(500),
+                Checkbox::make('restock')
+                    ->label('Regresar piezas al inventario')
+                    ->helperText('Desmárcala si las piezas no vuelven a la venta (por ejemplo, producto dañado). Las piezas sobre pedido nunca se descontaron.')
+                    ->default(true),
+                Checkbox::make('refunded')
+                    ->label('Reembolso realizado')
+                    ->helperText('Márcala si ya le devolviste el dinero al cliente. Si no, el pedido queda con «Reembolso pendiente».')
+                    ->visible($paid($record)),
+            ])
+            ->action(function (array $data, Order $record) {
+                $reason = $data['reason'].(filled($data['note'] ?? null) ? ': '.trim($data['note']) : '');
+
+                try {
+                    app(OrderCancellationService::class)->cancel(
+                        $record,
+                        auth()->user(),
+                        $reason,
+                        restock: (bool) ($data['restock'] ?? false),
+                        refunded: (bool) ($data['refunded'] ?? false),
+                    );
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo cancelar')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Pedido cancelado')->send();
+            });
+    }
+
+    public static function canCancel(Order $order, ?User $user): bool
+    {
+        return match ($order->status) {
+            OrderStatus::Reserved => $user !== null,
+            OrderStatus::Paid => $user?->role === UserRole::Owner,
+            default => false,
+        };
+    }
+
+    private function extendAction(): Action
+    {
+        return Action::make('extend')
+            ->label('Dar más tiempo')
+            ->icon(Heroicon::OutlinedClock)
+            ->color('gray')
+            ->visible(fn (Order $record) => $record->status === OrderStatus::Reserved)
+            ->modalHeading('Dar más tiempo para pagar')
+            ->modalDescription('Se suma a la fecha límite de pago del pedido.')
+            ->modalSubmitActionLabel('Dar más tiempo')
+            ->schema([
+                Radio::make('hours')
+                    ->label('Tiempo extra')
+                    ->options([24 => '24 horas', 48 => '48 horas'])
+                    ->default(24)
+                    ->required(),
+            ])
+            ->action(function (array $data, Order $record) {
+                try {
+                    $order = app(OrderReservationService::class)->extend($record, (int) $data['hours'], auth()->user());
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo dar más tiempo')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Nueva fecha límite: '.$order->expires_at->format('d/m/Y H:i'))->send();
+            });
+    }
+
+    /** Solo para pedidos que canceló el sistema (venció el apartado) y que nunca se pagaron. */
+    private function reactivateAction(): Action
+    {
+        return Action::make('reactivate')
+            ->label('Reactivar pedido')
+            ->icon(Heroicon::OutlinedArrowPath)
+            ->color('warning')
+            ->visible(fn (Order $record) => OrderStatusService::canReactivate($record))
+            ->requiresConfirmation()
+            ->modalHeading('Reactivar pedido')
+            ->modalDescription('Se vuelven a apartar las piezas y el pedido recibe una fecha límite de pago nueva. Si de alguna talla ya no hay piezas, no se reactiva.')
+            ->modalSubmitActionLabel('Sí, reactivar')
+            ->action(function (Order $record) {
+                try {
+                    $order = app(OrderReservationService::class)->reactivate($record, auth()->user());
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se reactivó el pedido')->body($exception->getMessage())->persistent()->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Pedido reactivado')->body('Fecha límite de pago: '.$order->expires_at->format('d/m/Y H:i'))->send();
+            });
+    }
+
+    /** Cierra un «Reembolso pendiente» cuando el dinero ya se devolvió. Como cancelar un pagado, es del owner. */
+    private function markRefundedAction(): Action
+    {
+        return Action::make('markRefunded')
+            ->label('Registrar reembolso')
+            ->icon(Heroicon::OutlinedReceiptRefund)
+            ->color('warning')
+            ->visible(fn (Order $record) => $record->refundPending() && auth()->user()?->role === UserRole::Owner)
+            ->requiresConfirmation()
+            ->modalHeading('Registrar reembolso')
+            ->modalDescription('Confirma que ya le devolviste el dinero al cliente por transferencia.')
+            ->modalSubmitActionLabel('Sí, ya se reembolsó')
+            ->action(function (Order $record) {
+                if ($record->refundPending()) {
+                    $record->update(['refunded_at' => now()]);
+                    app(OrderStatusService::class)->annotate($record, auth()->user(), 'Reembolso realizado.');
+                }
+
+                Notification::make()->success()->title('Reembolso registrado')->send();
+            });
     }
 
     private function editNotesAction(): Action

@@ -38,7 +38,8 @@ class StockService
         }
 
         $movement = DB::transaction(function () use ($variant, $type, $quantity, $user, $notes, $order) {
-            $locked = ProductVariant::query()->lockForUpdate()->findOrFail($variant->getKey());
+            // Con borradas incluidas: al cancelar un pedido las piezas regresan aunque la talla esté en la papelera.
+            $locked = ProductVariant::withTrashed()->lockForUpdate()->findOrFail($variant->getKey());
 
             $newStock = $locked->stock + $quantity;
 

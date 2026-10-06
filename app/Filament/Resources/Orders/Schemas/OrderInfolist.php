@@ -51,6 +51,20 @@ class OrderInfolist
                             ->columnSpanFull()
                             ->visible(fn (Order $record) => filled($record->cancellation_request_note)),
                     ]),
+                Section::make('Cancelación')
+                    ->columnSpanFull()
+                    ->columns(4)
+                    ->visible(fn (Order $record) => $record->status === OrderStatus::Cancelled)
+                    ->schema([
+                        TextEntry::make('cancelled_at')->label('Cancelado')->dateTime()->placeholder('—'),
+                        TextEntry::make('cancelled_by')->label('Canceló')->placeholder('—'),
+                        TextEntry::make('cancel_reason')->label('Motivo')->placeholder('—'),
+                        TextEntry::make('refunded_at')
+                            ->label('Reembolso')
+                            ->dateTime()
+                            ->placeholder(fn (Order $record) => $record->refundPending() ? 'Reembolso pendiente' : 'No aplica')
+                            ->color(fn (Order $record) => $record->refundPending() ? 'warning' : null),
+                    ]),
                 Section::make('Cliente')
                     ->columns(3)
                     ->schema([
@@ -141,6 +155,11 @@ class OrderInfolist
     {
         $method = $history->order?->delivery_method;
         $to = $history->to_status->labelFor($method);
+
+        // Mismo estado antes y después: es una anotación (más tiempo, reembolso...), no un cambio.
+        if ($history->from_status === $history->to_status) {
+            return "Anotación ({$to})";
+        }
 
         return $history->from_status === null
             ? "Pedido creado: {$to}"

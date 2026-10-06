@@ -99,6 +99,12 @@ class Order extends Model
         return $this->status->labelFor($this->delivery_method);
     }
 
+    /** Cancelado después de pagado y todavía sin devolverle el dinero al cliente. */
+    public function refundPending(): bool
+    {
+        return $this->status === OrderStatus::Cancelled && $this->paid_at !== null && $this->refunded_at === null;
+    }
+
     /** Teléfono para contactar al cliente: el que dejó para la entrega o el de su cuenta. */
     public function contactPhone(): ?string
     {

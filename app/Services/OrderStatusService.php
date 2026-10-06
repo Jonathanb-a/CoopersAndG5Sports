@@ -71,6 +71,52 @@ class OrderStatusService
         return $this->record($order, null, $order->status, $actor, $note);
     }
 
+    /** Deja una anotación en el historial sin cambiar el estado (por ejemplo, que se dio más tiempo para pagar). */
+    public function annotate(Order $order, User|Customer|null $actor, string $note): OrderStatusHistory
+    {
+        return $this->record($order, $order->status, $order->status, $actor, trim($note));
+    }
+
+    /**
+     * Única excepción a «cancelado es final»: un pedido que canceló el sistema (venció el apartado) y
+     * que nunca se pagó puede volver a apartado. Aquí solo se cambia el estado y se limpia la
+     * cancelación; volver a apartar las piezas es trabajo de OrderReservationService::reactivate().
+     *
+     * @throws InvalidOrderTransitionException
+     */
+    public function reactivate(Order $order, User|Customer|null $actor = null, ?string $note = null): Order
+    {
+        DB::transaction(function () use ($order, $actor, $note) {
+            $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            if (! self::canReactivate($locked)) {
+                throw new InvalidOrderTransitionException(
+                    "El pedido {$locked->number} no se puede reactivar: solo los pedidos que canceló el sistema y que nunca se pagaron."
+                );
+            }
+
+            $locked->forceFill([
+                'status' => OrderStatus::Reserved,
+                'cancelled_at' => null,
+                'cancel_reason' => null,
+                'cancelled_by' => null,
+            ]);
+
+            Order::withStatusChange(fn () => $locked->save());
+
+            $this->record($locked, OrderStatus::Cancelled, OrderStatus::Reserved, $actor, filled($note) ? trim($note) : null);
+        });
+
+        return $order->refresh();
+    }
+
+    public static function canReactivate(Order $order): bool
+    {
+        return $order->status === OrderStatus::Cancelled
+            && $order->cancelled_by === CancelledBy::System
+            && $order->paid_at === null;
+    }
+
     private function markPaid(Order $order, array $data): void
     {
         $order->paid_at = now();

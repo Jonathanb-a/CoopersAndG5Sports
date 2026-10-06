@@ -1,6 +1,6 @@
 import { buttonVariants } from '@/components/store/button';
 import { Container } from '@/components/store/container';
-import { OrderStatusBadge, type OrderStatusValue } from '@/components/store/order-status-badge';
+import { ExpiringBadge, OrderStatusBadge, type OrderStatusValue } from '@/components/store/order-status-badge';
 import { Reveal } from '@/components/store/reveal';
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ interface OrderRow {
     total: string;
     status: OrderStatusValue;
     status_label: string;
+    expiring_label: string | null;
 }
 
 interface MyOrdersProps {
@@ -68,6 +69,7 @@ function MyOrdersContent({ orders, pagination }: MyOrdersProps) {
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
                                         <OrderStatusBadge status={order.status} label={order.status_label} />
+                                        {order.expiring_label && <ExpiringBadge label={order.expiring_label} />}
                                         <p className="font-bold">{formatMoney(order.total)}</p>
                                     </div>
                                     <ChevronRight className="text-store-muted size-5 shrink-0" aria-hidden="true" />

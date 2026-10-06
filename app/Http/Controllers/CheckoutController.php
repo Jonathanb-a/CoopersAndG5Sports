@@ -12,6 +12,7 @@ use App\Services\CartService;
 use App\Services\CouponResult;
 use App\Services\CouponService;
 use App\Services\OrderService;
+use App\Services\ReservationLimitException;
 use App\Support\AddressRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +66,8 @@ class CheckoutController extends Controller
                 ->all(),
             'phone' => $customer->phone,
             'reserveHours' => (int) config('shop.reserve_hours', 48),
+            // Con el máximo de apartados sin pagar no se puede apartar otro: se avisa antes del botón.
+            'reservationLimit' => $this->orders->reservationLimitMessage($store, $customer),
         ]);
     }
 
@@ -95,6 +98,8 @@ class CheckoutController extends Controller
             $order = $this->orders->place($store, $customer, $method, $shippingAddress, $phone, $data['notes'] ?? null);
         } catch (CartChangedException $exception) {
             return to_route('cart.show')->with('cart_notices', $exception->notices);
+        } catch (ReservationLimitException $exception) {
+            return to_route('checkout')->withErrors(['reservations' => $exception->getMessage()]);
         }
 
         return to_route('order.thanks', ['number' => $order->number]);

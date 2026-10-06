@@ -21,6 +21,20 @@ interface OrderStatusBadgeProps {
     className?: string;
 }
 
+/** Etiqueta roja de un apartado al que le quedan pocas horas para pagarse: "Vence en 5 horas". */
+export function ExpiringBadge({ label, className }: { label: string; className?: string }) {
+    return (
+        <span
+            className={cn(
+                'rounded-store font-store-body inline-block bg-red-700 px-2.5 py-1 text-xs font-bold tracking-wide whitespace-nowrap text-white uppercase',
+                className,
+            )}
+        >
+            {label}
+        </span>
+    );
+}
+
 /** Estado de un pedido, en español y con color. */
 export function OrderStatusBadge({ status, label, className }: OrderStatusBadgeProps) {
     return (

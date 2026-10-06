@@ -19,6 +19,9 @@ class Order extends Model
 {
     use BelongsToStore;
 
+    /** Con menos de estas horas para pagar, al cliente se le marca el apartado como por vencer. */
+    public const EXPIRING_SOON_HOURS = 12;
+
     /** Se enciende solo mientras OrderStatusService guarda un cambio de estado. */
     private static bool $statusChangeAllowed = false;
 
@@ -102,6 +105,27 @@ class Order extends Model
     public function statusLabel(): string
     {
         return $this->status->labelFor($this->delivery_method);
+    }
+
+    /**
+     * Para el cliente: "Vence en 5 horas" cuando a un apartado le quedan menos de 12 horas para
+     * pagarse. Null si no está apartado o todavía tiene tiempo de sobra.
+     */
+    public function expiringLabel(): ?string
+    {
+        if ($this->status !== OrderStatus::Reserved || $this->expires_at === null) {
+            return null;
+        }
+
+        $minutes = (int) floor(now()->diffInMinutes($this->expires_at, false));
+
+        return match (true) {
+            $minutes >= self::EXPIRING_SOON_HOURS * 60 => null,
+            $minutes <= 0 => 'Venció el plazo de pago',
+            $minutes < 60 => 'Vence en menos de 1 hora',
+            $minutes < 120 => 'Vence en 1 hora',
+            default => 'Vence en '.intdiv($minutes, 60).' horas',
+        };
     }
 
     /** Cancelado después de pagado y todavía sin devolverle el dinero al cliente. */

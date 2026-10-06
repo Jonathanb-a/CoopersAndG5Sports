@@ -170,7 +170,7 @@ class MyOrdersTest extends TestCase
         $orders = collect($this->props(self::COPPERS.'/mi-cuenta/pedidos')['orders'])->keyBy('number');
 
         $this->assertSame(
-            ['number' => 'CP-00001', 'date' => '5 de octubre de 2026', 'total' => '1700.50', 'status' => 'enviado', 'status_label' => 'Listo para recoger'],
+            ['number' => 'CP-00001', 'date' => '5 de octubre de 2026', 'total' => '1700.50', 'status' => 'enviado', 'status_label' => 'Listo para recoger', 'expiring_label' => null],
             $orders['CP-00001'],
         );
         $this->assertSame('En camino', $orders['CP-00002']['status_label']);

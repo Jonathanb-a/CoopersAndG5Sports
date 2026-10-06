@@ -24,6 +24,8 @@ interface CheckoutProps {
     addresses: CustomerAddress[];
     phone: string | null;
     reserveHours: number;
+    /** Aviso cuando el cliente ya tiene el máximo de apartados sin pagar; con él no se puede apartar. */
+    reservationLimit: string | null;
 }
 
 const emptyAddress = { street: '', neighborhood: '', city: '', state: '', zip: '', notes: '' };
@@ -58,7 +60,7 @@ function Step({ number, title, children }: { number: number; title: string; chil
 }
 
 /** Checkout: resumen, entrega, contacto y total. Los importes se muestran aquí, pero el servidor los vuelve a calcular. */
-function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours }: CheckoutProps) {
+function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours, reservationLimit }: CheckoutProps) {
     const form = useForm<{
         delivery_method: string;
         address_id: number | null;
@@ -327,7 +329,16 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
                         </div>
                     </dl>
 
-                    <StoreButton type="submit" size="lg" className="mt-6 w-full" disabled={form.processing}>
+                    {reservationLimit && (
+                        <div role="alert" className="rounded-store mt-6 border border-red-600 px-4 py-3 text-sm">
+                            <p className="font-medium text-red-600 dark:text-red-400">{reservationLimit}</p>
+                            <Link href="/mi-cuenta/pedidos" className="text-store-link mt-2 inline-block font-medium underline underline-offset-4">
+                                Ver mis pedidos
+                            </Link>
+                        </div>
+                    )}
+
+                    <StoreButton type="submit" size="lg" className="mt-6 w-full" disabled={form.processing || reservationLimit !== null}>
                         {form.processing ? 'Apartando…' : 'Apartar pedido'}
                     </StoreButton>
                     <p className="text-store-muted mt-3 text-xs leading-relaxed">

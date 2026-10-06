@@ -58,6 +58,7 @@ class OrderService
      * @param  array<string, mixed>|null  $shippingAddress  dirección de entrega (null al recoger en tienda)
      *
      * @throws CartChangedException
+     * @throws ReservationLimitException si el cliente ya tiene el máximo de apartados sin pagar en la tienda
      */
     public function place(
         Store $store,
@@ -76,6 +77,11 @@ class OrderService
                 // misma tienda entran uno tras otro, así el número es consecutivo y nadie se lleva la
                 // misma pieza. Todo lo que se lee después ya ve los datos definitivos.
                 Store::query()->whereKey($store->id)->lockForUpdate()->first();
+
+                // Con la tienda bloqueada: dos pedidos a la vez del mismo cliente no se saltan el límite.
+                if ($message = $this->reservationLimitMessage($store, $customer)) {
+                    throw new ReservationLimitException($message);
+                }
 
                 ProductVariant::query()
                     ->whereIn('id', $this->cart->variantIds($store))
@@ -170,6 +176,25 @@ class OrderService
         $this->coupons->remove();
 
         return $order;
+    }
+
+    /**
+     * Aviso para el cliente que ya llegó al máximo de pedidos apartados sin pagar en esta tienda
+     * (shop.max_open_reservations). Null si todavía puede apartar. Los de la otra tienda no cuentan.
+     */
+    public function reservationLimitMessage(Store $store, Customer $customer): ?string
+    {
+        $open = Order::withoutGlobalScopes()
+            ->where('store_id', $store->id)
+            ->where('customer_id', $customer->id)
+            ->where('status', OrderStatus::Reserved->value)
+            ->count();
+
+        if ($open < (int) config('shop.max_open_reservations', 3)) {
+            return null;
+        }
+
+        return "Ya tienes {$open} pedidos apartados sin pagar en {$store->name}. Paga o cancela alguno para poder apartar otro.";
     }
 
     /**

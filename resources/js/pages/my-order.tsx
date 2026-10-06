@@ -1,7 +1,7 @@
 import { buttonVariants, StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
 import { FormStatus, TextAreaField } from '@/components/store/form';
-import { OrderStatusBadge, type OrderStatusValue } from '@/components/store/order-status-badge';
+import { ExpiringBadge, OrderStatusBadge, type OrderStatusValue } from '@/components/store/order-status-badge';
 import { Reveal } from '@/components/store/reveal';
 import { Tag } from '@/components/store/tag';
 import { formatMoney } from '@/lib/store';
@@ -28,6 +28,7 @@ interface MyOrderProps {
         number: string;
         status: OrderStatusValue;
         status_label: string;
+        expiring_label: string | null;
         date: string;
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
@@ -106,6 +107,7 @@ function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo,
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
                     <h1 className="store-heading text-4xl sm:text-5xl">Pedido {order.number}</h1>
                     <OrderStatusBadge status={order.status} label={order.status_label} />
+                    {order.expiring_label && <ExpiringBadge label={order.expiring_label} />}
                 </div>
                 <p className="text-store-muted mt-2">{order.date}</p>
             </Reveal>

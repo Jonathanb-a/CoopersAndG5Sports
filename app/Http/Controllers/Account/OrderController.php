@@ -46,6 +46,7 @@ class OrderController extends Controller
                 'total' => $order->total,
                 'status' => $order->status->value,
                 'status_label' => $order->statusLabel(),
+                'expiring_label' => $order->expiringLabel(),
             ])->all(),
             'pagination' => [
                 'current' => $orders->currentPage(),
@@ -79,6 +80,7 @@ class OrderController extends Controller
                 'number' => $order->number,
                 'status' => $order->status->value,
                 'status_label' => $order->statusLabel(),
+                'expiring_label' => $order->expiringLabel(),
                 'date' => $this->dateTime($order->created_at),
                 'delivery_label' => $order->delivery_method->getLabel(),
                 'shipping_address' => $order->shipping_address,

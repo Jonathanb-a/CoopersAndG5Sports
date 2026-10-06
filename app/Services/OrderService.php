@@ -23,6 +23,7 @@ class OrderService
         private readonly CartService $cart,
         private readonly CouponService $coupons,
         private readonly StockService $stock,
+        private readonly OrderStatusService $statuses,
     ) {}
 
     /**
@@ -120,6 +121,9 @@ class OrderService
                     'expires_at' => now()->addHours((int) config('shop.reserve_hours', 48)),
                     'notes' => filled($notes) ? trim($notes) : null,
                 ]);
+
+                // Primer renglón del historial: sin estado anterior → apartado, hecho por el cliente.
+                $this->statuses->recordInitial($order, $customer);
 
                 foreach ($view->lines as $line) {
                     // La parte con stock se aparta; lo que falta va en una línea aparte, sobre pedido.

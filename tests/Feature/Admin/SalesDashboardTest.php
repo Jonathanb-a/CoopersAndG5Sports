@@ -22,6 +22,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\OrderStatusService;
 use App\Services\SalesReport;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
@@ -208,7 +209,7 @@ class SalesDashboardTest extends TestCase
         $this->assertSame(1400.0, $report->summary($this->g5, $from, $to)['sales']);
         $this->assertSame(2, $report->summary($this->g5, $from, $to)['orders']);
 
-        $order->update(['status' => OrderStatus::Cancelled]);
+        app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled);
 
         $summary = $report->summary($this->g5, $from, $to);
         $this->assertSame(400.0, $summary['sales']);

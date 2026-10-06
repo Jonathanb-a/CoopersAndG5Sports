@@ -24,6 +24,39 @@ enum OrderStatus: string implements HasColor, HasLabel
         };
     }
 
+    /**
+     * Etiqueta para mostrar según la entrega: "Enviado" se dice "Listo para recoger" cuando el
+     * pedido se recoge en tienda y "En camino" en los demás métodos. El resto no cambia.
+     */
+    public function labelFor(?DeliveryMethod $method): string
+    {
+        if ($this !== self::Shipped || $method === null) {
+            return $this->getLabel();
+        }
+
+        return $method === DeliveryMethod::Pickup ? 'Listo para recoger' : 'En camino';
+    }
+
+    /**
+     * Estados a los que se puede pasar desde este. Entregado y cancelado son finales.
+     *
+     * @return list<self>
+     */
+    public function nextStatuses(): array
+    {
+        return match ($this) {
+            self::Reserved => [self::Paid, self::Cancelled],
+            self::Paid => [self::Shipped, self::Cancelled],
+            self::Shipped => [self::Delivered],
+            self::Delivered, self::Cancelled => [],
+        };
+    }
+
+    public function canTransitionTo(self $to): bool
+    {
+        return in_array($to, $this->nextStatuses(), true);
+    }
+
     public function getColor(): string
     {
         return match ($this) {

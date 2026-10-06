@@ -2,6 +2,12 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\OrderStatus;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderStatusHistory;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -17,39 +23,127 @@ class OrderInfolist
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
-                        TextEntry::make('number')->label('Número'),
-                        TextEntry::make('status')->label('Estado')->badge(),
+                        TextEntry::make('number')->label('Número')->weight('bold'),
+                        TextEntry::make('status')
+                            ->label('Estado')
+                            ->badge()
+                            ->formatStateUsing(fn (OrderStatus $state, Order $record) => $record->statusLabel()),
                         TextEntry::make('channel')->label('Canal')->badge(),
-                        TextEntry::make('customer.name')->label('Cliente')->placeholder('—'),
                         TextEntry::make('delivery_method')->label('Entrega')->badge()->color('gray'),
                         TextEntry::make('created_at')->label('Creado')->dateTime(),
-                        TextEntry::make('expires_at')->label('Vence')->dateTime()->placeholder('—'),
+                        TextEntry::make('expires_at')
+                            ->label('Fecha límite de pago')
+                            ->dateTime()
+                            ->placeholder('—')
+                            ->color(fn (Order $record) => $record->status === OrderStatus::Reserved && $record->expires_at?->isPast() ? 'danger' : null),
                         TextEntry::make('paid_at')->label('Pagado')->dateTime()->placeholder('—'),
+                        TextEntry::make('payment_reference')->label('Referencia de pago')->placeholder('—'),
                         TextEntry::make('delivered_at')->label('Entregado')->dateTime()->placeholder('—'),
-                        TextEntry::make('notes')->label('Notas')->placeholder('—')->columnSpanFull(),
+                        TextEntry::make('tracking_carrier')->label('Paquetería')->placeholder('—'),
+                        TextEntry::make('tracking_number')->label('Número de guía')->placeholder('—')->copyable(),
+                        TextEntry::make('cancellation_requested_at')
+                            ->label('Solicitó cancelar')
+                            ->dateTime()
+                            ->color('danger')
+                            ->visible(fn (Order $record) => $record->cancellation_requested_at !== null),
+                        TextEntry::make('cancellation_request_note')
+                            ->label('Motivo de la solicitud')
+                            ->columnSpanFull()
+                            ->visible(fn (Order $record) => filled($record->cancellation_request_note)),
+                    ]),
+                Section::make('Cliente')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('customer.name')->label('Nombre')->placeholder('Mostrador'),
+                        TextEntry::make('customer.email')->label('Correo')->placeholder('—')->copyable(),
+                        TextEntry::make('contact_phone')
+                            ->label('Teléfono')
+                            ->state(fn (Order $record) => $record->contactPhone())
+                            ->placeholder('—')
+                            ->copyable(),
+                    ]),
+                Section::make('Dirección de entrega')
+                    ->columns(3)
+                    ->visible(fn (Order $record) => filled($record->shipping_address['street'] ?? null))
+                    ->schema([
+                        TextEntry::make('shipping_address.name')->label('Recibe')->placeholder('—'),
+                        TextEntry::make('shipping_address.street')->label('Calle y número'),
+                        TextEntry::make('shipping_address.neighborhood')->label('Colonia'),
+                        TextEntry::make('shipping_address.city')->label('Ciudad'),
+                        TextEntry::make('shipping_address.state')->label('Estado'),
+                        TextEntry::make('shipping_address.zip')->label('Código postal'),
+                        TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—')->columnSpanFull(),
                     ]),
                 Section::make('Productos')
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
                             ->hiddenLabel()
-                            ->columns(4)
+                            ->columns(6)
                             ->schema([
+                                ImageEntry::make('photo')
+                                    ->label('Foto')
+                                    ->state(fn (OrderItem $record) => $record->productVariant?->product?->images->first()?->path)
+                                    ->disk('public')
+                                    ->imageHeight(64)
+                                    ->placeholder('Sin foto'),
                                 TextEntry::make('product_name')->label('Producto'),
                                 TextEntry::make('size')->label('Talla'),
                                 TextEntry::make('quantity')->label('Cantidad'),
                                 TextEntry::make('unit_price')->label('Precio unitario')->money(),
+                                IconEntry::make('is_backorder')->label('Sobre pedido')->boolean(),
                             ]),
                     ]),
                 Section::make('Totales')
                     ->columnSpanFull()
-                    ->columns(4)
+                    ->columns(5)
                     ->schema([
                         TextEntry::make('subtotal')->label('Subtotal')->money(),
+                        TextEntry::make('coupon.code')->label('Cupón')->placeholder('Sin cupón'),
                         TextEntry::make('discount')->label('Descuento')->money(),
                         TextEntry::make('shipping_cost')->label('Envío')->money(),
                         TextEntry::make('total')->label('Total')->money()->weight('bold'),
                     ]),
+                Section::make('Notas')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        TextEntry::make('notes')->label('Notas del cliente')->placeholder('—'),
+                        TextEntry::make('internal_notes')
+                            ->label('Notas internas')
+                            ->helperText('Solo las ve el personal de la tienda.')
+                            ->placeholder('—'),
+                    ]),
+                Section::make('Historial')
+                    ->columnSpanFull()
+                    ->schema([
+                        // Línea de tiempo: del más viejo al más nuevo.
+                        RepeatableEntry::make('statusHistories')
+                            ->hiddenLabel()
+                            ->columns(4)
+                            ->placeholder('Sin movimientos registrados.')
+                            ->schema([
+                                TextEntry::make('created_at')->label('Fecha')->dateTime(),
+                                TextEntry::make('to_status')
+                                    ->label('Cambio')
+                                    ->state(fn (OrderStatusHistory $record) => self::change($record)),
+                                TextEntry::make('actor')
+                                    ->label('Quién')
+                                    ->state(fn (OrderStatusHistory $record) => $record->actorLabel()),
+                                TextEntry::make('note')->label('Nota')->placeholder('—'),
+                            ]),
+                    ]),
             ]);
+    }
+
+    /** "Apartado → Pagado", con "Enviado" dicho según la entrega del pedido. */
+    public static function change(OrderStatusHistory $history): string
+    {
+        $method = $history->order?->delivery_method;
+        $to = $history->to_status->labelFor($method);
+
+        return $history->from_status === null
+            ? "Pedido creado: {$to}"
+            : $history->from_status->labelFor($method).' → '.$to;
     }
 }

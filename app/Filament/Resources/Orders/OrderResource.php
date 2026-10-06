@@ -13,7 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-/** Pedidos de la tienda actual. Solo lectura: los pedidos se crean desde la tienda o el mostrador. */
+/** Pedidos de la tienda actual. No se crean aquí (vienen de la tienda en línea o del mostrador); se atienden desde su detalle. */
 class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;

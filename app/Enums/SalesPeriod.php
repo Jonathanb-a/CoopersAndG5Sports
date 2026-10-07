@@ -13,6 +13,8 @@ enum SalesPeriod: string implements HasLabel
     case Month30 = 'days30';
     case ThisMonth = 'month';
 
+    public const DEFAULT = self::Month30;
+
     public function getLabel(): string
     {
         return match ($this) {
@@ -38,9 +40,35 @@ enum SalesPeriod: string implements HasLabel
         return [$from, $now->copy()->endOfDay()];
     }
 
-    /** El periodo guardado en los filtros del dashboard (7 días por defecto). */
+    /**
+     * Periodo anterior, para comparar: ayer, los 7 o 30 días de antes, o los mismos días del mes
+     * pasado (del 1 al día de hoy).
+     *
+     * @return array{CarbonInterface, CarbonInterface}
+     */
+    public function previousRange(): array
+    {
+        [$from, $to] = $this->range();
+
+        if ($this === self::ThisMonth) {
+            return [
+                $from->copy()->subMonthNoOverflow()->startOfMonth(),
+                $to->copy()->subMonthNoOverflow()->endOfDay(),
+            ];
+        }
+
+        $days = match ($this) {
+            self::Today => 1,
+            self::Week => 7,
+            default => 30,
+        };
+
+        return [$from->copy()->subDays($days), $from->copy()->subSecond()];
+    }
+
+    /** El periodo guardado en los filtros del dashboard (30 días por defecto). */
     public static function fromFilters(?array $filters): self
     {
-        return self::tryFrom((string) ($filters['period'] ?? '')) ?? self::Week;
+        return self::tryFrom((string) ($filters['period'] ?? '')) ?? self::DEFAULT;
     }
 }

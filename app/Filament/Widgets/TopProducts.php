@@ -5,55 +5,51 @@ namespace App\Filament\Widgets;
 use App\Enums\SalesPeriod;
 use App\Services\SalesReport;
 use Filament\Facades\Filament;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
+use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Filament\Widgets\TableWidget;
-use Illuminate\Contracts\Support\Htmlable;
 
-class TopProducts extends TableWidget
+/** Barras: los 5 productos más vendidos del periodo, por piezas. */
+class TopProducts extends ChartWidget
 {
     use InteractsWithPageFilters;
 
+    public const LIMIT = 5;
+
     protected static ?int $sort = 6;
 
-    protected int|string|array $columnSpan = 'full';
+    protected ?string $heading = 'Más vendidos';
 
-    protected function getTableHeading(): string|Htmlable|null
+    protected ?string $description = 'Los 5 productos con más piezas vendidas en el periodo.';
+
+    protected function getType(): string
     {
-        return 'Más vendidos';
+        return 'bar';
     }
 
-    public function table(Table $table): Table
+    protected function getData(): array
     {
-        return $table
-            ->description('Top 10 por piezas vendidas en el periodo seleccionado.')
-            ->records(function (): array {
-                $store = Filament::getTenant();
+        $store = Filament::getTenant();
+        $period = SalesPeriod::fromFilters($this->pageFilters);
+        $rows = $store ? app(SalesReport::class)->topProducts($store, ...[...$period->range(), self::LIMIT]) : [];
 
-                if ($store === null) {
-                    return [];
-                }
+        return [
+            'datasets' => [
+                [
+                    'label' => 'Piezas vendidas',
+                    'data' => array_column($rows, 'pieces'),
+                    'backgroundColor' => '#10b981',
+                ],
+            ],
+            'labels' => array_column($rows, 'name'),
+        ];
+    }
 
-                $period = SalesPeriod::fromFilters($this->pageFilters);
-                $rows = app(SalesReport::class)->topProducts($store, ...$period->range());
-
-                // Cada fila necesita una llave única: el nombre del producto.
-                return array_column($rows, null, 'name');
-            })
-            ->columns([
-                TextColumn::make('name')
-                    ->label('Producto'),
-                TextColumn::make('pieces')
-                    ->label('Piezas vendidas')
-                    ->badge()
-                    ->color('success'),
-                TextColumn::make('revenue')
-                    ->label('Importe')
-                    ->money(),
-            ])
-            ->paginated(false)
-            ->emptyStateHeading('Sin ventas')
-            ->emptyStateDescription('No hay ventas en este periodo.');
+    protected function getOptions(): array
+    {
+        return [
+            'indexAxis' => 'y',
+            'plugins' => ['legend' => ['display' => false]],
+            'scales' => ['x' => ['ticks' => ['precision' => 0]]],
+        ];
     }
 }

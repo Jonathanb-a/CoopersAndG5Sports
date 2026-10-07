@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LatestOrders extends TableWidget
 {
+    public const LIMIT = 8;
+
     protected static ?int $sort = 5;
 
     protected int|string|array $columnSpan = 'full';
@@ -30,18 +32,22 @@ class LatestOrders extends TableWidget
                 ->with('customer')
                 ->latest('created_at')
                 ->orderByDesc('id')
-                ->limit(10))
+                ->limit(self::LIMIT))
             ->columns([
                 TextColumn::make('number')
                     ->label('Número'),
                 TextColumn::make('customer.name')
                     ->label('Cliente')
-                    ->placeholder('—'),
+                    ->placeholder('Mostrador'),
                 TextColumn::make('total')
                     ->label('Total')
                     ->money(),
                 TextColumn::make('status')
                     ->label('Estado')
+                    ->badge()
+                    ->formatStateUsing(fn (Order $record): string => $record->statusLabel()),
+                TextColumn::make('channel')
+                    ->label('Canal')
                     ->badge(),
                 TextColumn::make('created_at')
                     ->label('Fecha')

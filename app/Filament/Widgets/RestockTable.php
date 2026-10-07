@@ -21,20 +21,23 @@ class RestockTable extends TableWidget
 
     protected function getTableHeading(): string|Htmlable|null
     {
-        return 'Por resurtir';
+        return 'Alertas de stock';
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->description('Productos activos en rojo o amarillo, con los agotados primero.')
+            ->description('Modelos agotados (todas las tallas en 0) y modelos con alguna talla en su última pieza.')
             ->query(fn (): Builder => Product::query()
                 ->where('products.store_id', Filament::getTenant()?->getKey())
                 ->where('products.is_active', true)
-                ->needsRestock()
+                // Agotado por completo, o con alguna talla en 1.
+                ->where(fn (Builder $query) => $query
+                    ->soldOut()
+                    ->orWhereHas('variants', fn (Builder $variants) => $variants->where('stock', 1)))
                 ->withSum('variants as total_stock', 'stock')
                 ->withCount(['variants as sold_out_count' => fn (Builder $query) => $query->where('stock', 0)])
-                ->with('images')
+                ->with(['images', 'variants'])
                 ->orderBy('total_stock')
                 ->orderByDesc('sold_out_count')
                 ->orderBy('products.name'))
@@ -50,6 +53,17 @@ class RestockTable extends TableWidget
                     ->badge()
                     ->default(0)
                     ->color(fn ($state): string => (int) $state > 0 ? 'danger' : 'gray'),
+                TextColumn::make('last_piece_sizes')
+                    ->label('Tallas con 1 pieza')
+                    ->badge()
+                    ->color('warning')
+                    ->state(fn (Product $record): array => $record->variants->where('stock', 1)->pluck('size')->all())
+                    ->placeholder('—'),
+                TextColumn::make('alert')
+                    ->label('Alerta')
+                    ->badge()
+                    ->state(fn (Product $record): string => (int) $record->total_stock === 0 ? 'Agotado' : 'Última pieza')
+                    ->color(fn (string $state): string => $state === 'Agotado' ? 'danger' : 'warning'),
                 TextColumn::make('total_stock')
                     ->label('Stock total')
                     ->badge()
@@ -60,6 +74,6 @@ class RestockTable extends TableWidget
             ->paginated([5, 10, 25])
             ->defaultPaginationPageOption(5)
             ->emptyStateHeading('Todo en orden')
-            ->emptyStateDescription('No hay productos por resurtir.');
+            ->emptyStateDescription('No hay modelos agotados ni tallas en su última pieza.');
     }
 }

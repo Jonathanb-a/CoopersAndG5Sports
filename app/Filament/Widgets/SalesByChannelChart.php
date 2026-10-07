@@ -15,11 +15,11 @@ class SalesByChannelChart extends ChartWidget
 
     protected static ?int $sort = 4;
 
-    protected ?string $heading = 'Ventas web contra mostrador';
+    protected ?string $heading = 'Ventas por canal';
 
     protected function getType(): string
     {
-        return 'bar';
+        return 'doughnut';
     }
 
     protected function getData(): array
@@ -37,13 +37,6 @@ class SalesByChannelChart extends ChartWidget
                 ],
             ],
             'labels' => array_map(fn (string $channel) => OrderChannel::from($channel)->getLabel(), array_keys($totals)),
-        ];
-    }
-
-    protected function getOptions(): array
-    {
-        return [
-            'plugins' => ['legend' => ['display' => false]],
         ];
     }
 }

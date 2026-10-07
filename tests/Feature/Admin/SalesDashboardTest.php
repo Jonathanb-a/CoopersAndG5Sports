@@ -161,7 +161,7 @@ class SalesDashboardTest extends TestCase
             ->assertSee('$1,200.00')   // ventas
             ->assertSee('$600.00')     // ticket promedio (1,200 / 2)
             ->assertSee('$950.00')     // ganancia estimada
-            ->assertSee('Apartados pendientes de pago');
+            ->assertSee('Por cobrar');
 
         // 7 días: A + B + C. Costo: 200 + 100 + 50 = 350.
         Livewire::test(SalesStats::class, ['pageFilters' => ['period' => 'week']])
@@ -240,12 +240,12 @@ class SalesDashboardTest extends TestCase
             ->assertSee('Ventas')
             ->assertSee('$1,700.00')
             ->assertSee('Ticket promedio')
-            ->assertDontSee('Ganancia estimada')
+            ->assertDontSee('Utilidad estimada')
             ->assertDontSee('$1,350.00');
 
         $this->panelAs($this->owner, $this->g5);
         Livewire::test(SalesStats::class, ['pageFilters' => ['period' => 'week']])
-            ->assertSee('Ganancia estimada');
+            ->assertSee('Utilidad estimada');
     }
 
     public function test_charts_use_the_period_and_the_store()
@@ -267,17 +267,17 @@ class SalesDashboardTest extends TestCase
         $this->assertSame(['Apartado', 'Pagado', 'Enviado', 'Entregado', 'Cancelado'], $donut['labels']);
         $this->assertSame([1, 1, 1, 1, 1], $donut['datasets'][0]['data']);
 
-        // Barras: web contra mostrador.
+        // Dona: ventas por canal.
         $bars = $data(SalesByChannelChart::class, 'week');
         $this->assertSame(['Web', 'Mostrador'], $bars['labels']);
         $this->assertSame([1500.0, 200.0], $bars['datasets'][0]['data']);
 
         $this->assertSame('line', (new ReflectionMethod(SalesByDayChart::class, 'getType'))->invoke(Livewire::test(SalesByDayChart::class)->instance()));
         $this->assertSame('doughnut', (new ReflectionMethod(OrdersByStatusChart::class, 'getType'))->invoke(Livewire::test(OrdersByStatusChart::class)->instance()));
-        $this->assertSame('bar', (new ReflectionMethod(SalesByChannelChart::class, 'getType'))->invoke(Livewire::test(SalesByChannelChart::class)->instance()));
+        $this->assertSame('doughnut', (new ReflectionMethod(SalesByChannelChart::class, 'getType'))->invoke(Livewire::test(SalesByChannelChart::class)->instance()));
     }
 
-    public function test_latest_orders_shows_the_ten_most_recent_with_a_link()
+    public function test_latest_orders_shows_the_eight_most_recent_with_a_link()
     {
         $customer = Customer::create(['name' => 'Ana López', 'email' => 'ana@example.com']);
         $orders = [];
@@ -290,11 +290,14 @@ class SalesDashboardTest extends TestCase
         $this->panelAs($this->staffG5, $this->g5);
 
         $component = Livewire::test(LatestOrders::class);
-        $this->assertCount(10, $component->instance()->getTableRecords());
+        $this->assertCount(8, $component->instance()->getTableRecords());
 
         $component
-            ->assertCanSeeTableRecords(array_slice($orders, 2, 10, preserve_keys: false))
-            ->assertCanNotSeeTableRecords([$orders[1], $orders[2], $theirs])
+            ->assertCanSeeTableRecords(array_slice($orders, 4, 8, preserve_keys: false))
+            ->assertCanNotSeeTableRecords([$orders[1], $orders[2], $orders[3], $orders[4], $theirs])
+            ->assertTableColumnStateSet('channel', OrderChannel::Counter, $orders[12])
+            ->assertTableColumnStateSet('customer.name', null, $orders[11])
+            ->assertSee('Mostrador')
             ->assertSee('Últimos pedidos')
             ->assertSee('Ana López')
             ->assertSee("/admin/g5/orders/{$orders[12]->id}", escape: false);

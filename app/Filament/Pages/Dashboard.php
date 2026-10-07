@@ -18,7 +18,7 @@ class Dashboard extends BaseDashboard
             Select::make('period')
                 ->label('Periodo de ventas')
                 ->options(SalesPeriod::class)
-                ->default(SalesPeriod::Week->value)
+                ->default(SalesPeriod::DEFAULT->value)
                 ->native(false)
                 ->selectablePlaceholder(false),
         ]);

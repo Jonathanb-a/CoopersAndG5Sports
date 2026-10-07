@@ -208,7 +208,7 @@ class DashboardTest extends TestCase
             ->assertTableColumnStateSet('total_stock', 0, $red)
             ->assertTableColumnStateSet('total_stock', 1, $yellowOne)
             ->assertTableColumnStateSet('total_stock', 2, $yellow)
-            ->assertSee('Por resurtir')
+            ->assertSee('Alertas de stock')
             ->assertSee('/admin/g5/products/'.$red->id.'/edit', escape: false);
     }
 

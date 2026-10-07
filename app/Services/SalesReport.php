@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Models\Store;
@@ -67,12 +68,13 @@ class SalesReport
             $days[$day->toDateString()] = 0.0;
         }
 
+        // Sumado en la base de datos: un renglón por día, no un renglón por pedido.
         $this->sales($store, $from, $to)
-            ->select('orders.paid_at', 'orders.total')
+            ->selectRaw('DATE(orders.paid_at) as day, COALESCE(SUM(orders.total), 0) as total')
+            ->groupByRaw('DATE(orders.paid_at)')
             ->get()
-            ->each(function ($order) use (&$days) {
-                $key = Carbon::parse($order->paid_at)->toDateString();
-                $days[$key] = ($days[$key] ?? 0) + (float) $order->total;
+            ->each(function ($row) use (&$days) {
+                $days[Carbon::parse($row->day)->toDateString()] = (float) $row->total;
             });
 
         return $days;
@@ -118,6 +120,56 @@ class SalesReport
         }
 
         return $result;
+    }
+
+    /**
+     * Ventas del periodo por método de entrega.
+     *
+     * @return array<string, float> valor del método => total
+     */
+    public function salesByDelivery(Store $store, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $totals = $this->sales($store, $from, $to)
+            ->groupBy('orders.delivery_method')
+            ->selectRaw('orders.delivery_method as method, COALESCE(SUM(orders.total), 0) as total')
+            ->pluck('total', 'method');
+
+        $result = [];
+        foreach (DeliveryMethod::cases() as $method) {
+            $result[$method->value] = (float) ($totals[$method->value] ?? 0);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Por cobrar: apartados vigentes (sin pagar y con el plazo todavía abierto) al día de hoy.
+     *
+     * @return array{orders: int, amount: float}
+     */
+    public function receivable(Store $store): array
+    {
+        $row = DB::table('orders')
+            ->where('store_id', $store->getKey())
+            ->where('status', OrderStatus::Reserved->value)
+            ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->selectRaw('COUNT(*) as orders, COALESCE(SUM(total), 0) as amount')
+            ->first();
+
+        return ['orders' => (int) $row->orders, 'amount' => (float) $row->amount];
+    }
+
+    /**
+     * Cambio en porcentaje contra el periodo anterior (25.0 = subió 25 %). Null si antes fue 0 y
+     * no hay contra qué comparar.
+     */
+    public static function change(float $current, float $previous): ?float
+    {
+        if ($previous == 0.0) {
+            return null;
+        }
+
+        return round(($current - $previous) / abs($previous) * 100, 1);
     }
 
     /**

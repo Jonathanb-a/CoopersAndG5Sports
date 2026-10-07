@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\OrderStatus;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\Order;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -44,11 +45,17 @@ class ExpiringReservations extends TableWidget
                     ->label('Total')
                     ->money(),
                 TextColumn::make('expires_at')
-                    ->label('Vence')
+                    ->label('Tiempo restante')
                     ->since()
                     ->color(fn (Order $record): string => $record->expires_at->isPast() ? 'danger' : 'warning'),
             ])
             ->recordUrl(fn (Order $record): string => OrderResource::getUrl('view', ['record' => $record]))
+            ->recordActions([
+                Action::make('open')
+                    ->label('Abrir pedido')
+                    ->button()
+                    ->url(fn (Order $record): string => OrderResource::getUrl('view', ['record' => $record])),
+            ])
             ->paginated([5, 10, 25])
             ->defaultPaginationPageOption(5)
             ->emptyStateHeading('Sin apartados por vencer')

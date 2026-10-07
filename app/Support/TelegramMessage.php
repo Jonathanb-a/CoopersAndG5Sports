@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\DeliveryMethod;
+use App\Enums\PaymentMethod;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
@@ -14,16 +16,38 @@ use Illuminate\Support\Number;
  */
 class TelegramMessage
 {
-    /** Pedido nuevo de la tienda en línea. */
+    /**
+     * Pedido nuevo de la tienda en línea. Al recoger en tienda solo dice eso; en cualquier otra
+     * entrega (a domicilio) agrega a dónde va, quién recibe y el teléfono, más lo que el cliente
+     * prefiere de día y hora.
+     */
     public static function newOrder(Order $order, Store $store, ?Customer $customer): string
     {
-        return implode("\n", [
+        $lines = [
             "{$store->name} · {$order->number} · Pedido nuevo",
             'Cliente: '.($customer?->name ?? '—'),
             'Total: '.Number::currency((float) $order->total),
             'Entrega: '.$order->delivery_method->getLabel(),
-            'Paga antes de: '.($order->expires_at ? $order->expires_at->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—'),
-        ]);
+        ];
+
+        if ($order->delivery_method !== DeliveryMethod::Pickup) {
+            $address = $order->shipping_address ?? [];
+            $point = implode(', ', array_filter([$address['street'] ?? null, $address['neighborhood'] ?? null, $address['city'] ?? null]));
+
+            $lines = [...$lines, ...array_filter([
+                $point !== '' ? "Dirección: {$point}" : null,
+                filled($address['notes'] ?? null) ? "Referencias: {$address['notes']}" : null,
+                filled($address['name'] ?? null) ? "Recibe: {$address['name']}" : null,
+                ($phone = $order->contactPhone()) ? "Teléfono: {$phone}" : null,
+                ($preference = $order->deliveryPreference()) ? "Preferencia de entrega: {$preference}" : null,
+            ])];
+        }
+
+        // En la tienda en línea se paga por transferencia; solo cambia si el pedido trae otro método.
+        $lines[] = 'Pago: '.($order->payment_method?->getLabel() ?? PaymentMethod::Transfer->getLabel());
+        $lines[] = 'Paga antes de: '.($order->expires_at ? $order->expires_at->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—');
+
+        return implode("\n", $lines);
     }
 
     /** El cliente pidió cancelar un pedido ya pagado. */

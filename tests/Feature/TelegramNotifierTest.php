@@ -212,7 +212,10 @@ class TelegramNotifierTest extends TestCase
 
         $this->checkout($shirt, 2, data: [
             'delivery_method' => 'local',
-            'local' => ['name' => 'Ana Pérez', 'point' => 'Calle Hidalgo 5, Centro'],
+            'local' => [
+                'name' => 'Luisa Pérez', 'point' => 'Calle Hidalgo 5, Centro', 'references' => 'Portón negro',
+                'preferred_date' => '2026-10-08', 'preferred_window' => 'Entre 4 y 6 pm',
+            ],
         ])->assertSessionHasNoErrors();
         $this->checkout($ball, host: self::G5)->assertSessionHasNoErrors();
 
@@ -222,6 +225,12 @@ class TelegramNotifierTest extends TestCase
                 'Cliente: Ana Pérez',
                 'Total: $1,080.00',
                 'Entrega: Entrega local',
+                'Dirección: Calle Hidalgo 5, Centro, Zihuatanejo',
+                'Referencias: Portón negro',
+                'Recibe: Luisa Pérez',
+                'Teléfono: 755 123 4567',
+                'Preferencia de entrega: jueves 8 de octubre de 2026 · Entre 4 y 6 pm',
+                'Pago: Transferencia',
                 'Paga antes de: 08/10/2026 10:30',
             ]),
             implode("\n", [
@@ -229,6 +238,7 @@ class TelegramNotifierTest extends TestCase
                 'Cliente: Ana Pérez',
                 'Total: $500.00',
                 'Entrega: Recoger en tienda',
+                'Pago: Transferencia',
                 'Paga antes de: 08/10/2026 10:30',
             ]),
         ], $this->sent());

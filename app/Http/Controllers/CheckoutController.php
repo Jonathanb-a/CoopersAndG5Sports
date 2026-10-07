@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DeliveryMethod;
+use App\Enums\PaymentMethod;
 use App\Http\Middleware\ResolveStore;
 use App\Models\Customer;
 use App\Models\Store;
@@ -20,8 +21,8 @@ use Inertia\Response;
 
 /**
  * Checkout: resumen, entrega, contacto y «Apartar pedido». Exige cliente con sesión.
- * Del navegador solo se aceptan el método de entrega (recoger o entrega local), los datos de la
- * entrega local, el teléfono y las notas:
+ * Del navegador solo se aceptan el método de entrega (recoger o entrega local), la forma de pago
+ * (transferencia o efectivo), los datos de la entrega local, el teléfono y las notas:
  * líneas, precios, descuento y envío los calcula el servidor.
  */
 class CheckoutController extends Controller
@@ -82,15 +83,19 @@ class CheckoutController extends Controller
         // Solo recoger en tienda y entrega local: cualquier otro método (también el nacional) se rechaza.
         $data = $request->validate([
             'delivery_method' => ['required', Rule::in(array_keys($this->orders->deliveryOptions($store)))],
+            'payment_method' => ['nullable', Rule::in([PaymentMethod::Transfer->value, PaymentMethod::Cash->value])],
             'phone' => ['required', 'string', 'regex:/^[0-9+()\s-]{10,20}$/'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
+            'payment_method.in' => 'Elige si vas a pagar con transferencia o en efectivo.',
             'delivery_method.required' => 'Elige cómo quieres recibir tu pedido.',
             'delivery_method.in' => 'Ese método de entrega no está disponible en esta tienda.',
             'phone.regex' => 'Escribe un teléfono válido, por ejemplo 755 123 4567.',
         ], ['phone' => 'teléfono de contacto', 'notes' => 'notas']);
 
         $method = DeliveryMethod::from($data['delivery_method']);
+        // Sin dato se paga por transferencia, como siempre.
+        $payment = PaymentMethod::tryFrom((string) ($data['payment_method'] ?? '')) ?? PaymentMethod::Transfer;
         $phone = trim($data['phone']);
         $local = $method === DeliveryMethod::Local ? $this->localDelivery($request) : null;
 
@@ -103,7 +108,7 @@ class CheckoutController extends Controller
         ];
 
         try {
-            $order = $this->orders->place($store, $customer, $method, $shippingAddress, $phone, $data['notes'] ?? null);
+            $order = $this->orders->place($store, $customer, $method, $shippingAddress, $phone, $data['notes'] ?? null, $payment);
         } catch (CartChangedException $exception) {
             return to_route('cart.show')->with('cart_notices', $exception->notices);
         } catch (ReservationLimitException $exception) {

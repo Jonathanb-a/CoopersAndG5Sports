@@ -32,6 +32,8 @@ interface MyOrderProps {
         expiring_label: string | null;
         date: string;
         delivery_label: string;
+        /** "transfer" o "cash". */
+        payment_method: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
         coupon: string | null;
@@ -98,6 +100,9 @@ function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, b
     const { errors } = usePage<SharedData & { errors: Record<string, string> }>().props;
     const address = order.shipping_address;
     const reserved = order.status === 'apartado';
+    // En efectivo se paga al recibir o recoger: el recordatorio vale hasta que el pedido se entrega o se cancela.
+    const cash = order.payment_method === 'cash';
+    const cashPending = cash && ['apartado', 'pagado', 'enviado'].includes(order.status);
 
     return (
         <Container className="max-w-3xl py-8 sm:py-12 lg:py-16">
@@ -131,7 +136,20 @@ function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, b
             </div>
 
             <div className="mt-6 space-y-6">
-                {reserved && (
+                {cashPending && (
+                    <Section id="pago-efectivo" title="Pago en efectivo">
+                        <p className="leading-relaxed">
+                            Pagas <strong>{formatMoney(order.total)}</strong> en efectivo{' '}
+                            {pickup ? 'cuando pases por tu pedido a la tienda' : 'al recibir tu pedido'}.
+                        </p>
+                        <p className="border-store-border bg-store-bg rounded-store mt-3 border-[length:var(--store-border-width)] px-4 py-3 font-medium">
+                            Ten el efectivo a la mano {pickup ? 'cuando recojas tu pedido' : 'a la hora de la entrega'}. No necesitas hacer
+                            transferencia ni mandar comprobante.
+                        </p>
+                    </Section>
+                )}
+
+                {reserved && !cash && (
                     <Section id="pago" title="Cómo pagar">
                         <ol className="list-decimal space-y-3 pl-5 leading-relaxed">
                             <li>

@@ -131,6 +131,12 @@ class Order extends Model
         };
     }
 
+    /** El cliente paga en efectivo al recibir o recoger (en la tienda en línea el resto paga por transferencia). */
+    public function paysInCash(): bool
+    {
+        return $this->payment_method === PaymentMethod::Cash;
+    }
+
     /** Cancelado después de pagado y todavía sin devolverle el dinero al cliente. */
     public function refundPending(): bool
     {

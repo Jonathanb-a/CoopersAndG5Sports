@@ -25,6 +25,8 @@ interface OrderThanksProps {
         number: string;
         status: string;
         delivery_method: string;
+        /** "transfer" o "cash". */
+        payment_method: string;
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
@@ -69,51 +71,21 @@ function OrderThanksContent({ order, pickup, bankInfo, whatsapp }: OrderThanksPr
             </Reveal>
 
             <div className="mt-8 space-y-6">
-                <section aria-labelledby="pago" className="store-surface p-5 sm:p-7">
-                    <h2 id="pago" className="store-heading text-2xl sm:text-3xl">
-                        Cómo pagar
-                    </h2>
-                    <ol className="mt-4 list-decimal space-y-3 pl-5 leading-relaxed">
-                        <li>
-                            Haz una transferencia por <strong>{formatMoney(order.total)}</strong> a esta cuenta:
-                            {bankInfo ? (
-                                <p className="border-store-border bg-store-bg rounded-store mt-2 border-[length:var(--store-border-width)] px-4 py-3 font-medium whitespace-pre-line">
-                                    {bankInfo}
-                                </p>
-                            ) : (
-                                <span className="text-store-muted block">Te compartimos los datos de la cuenta por WhatsApp.</span>
-                            )}
-                        </li>
-                        <li>
-                            En el concepto de la transferencia escribe tu número de pedido:{' '}
-                            <strong className="whitespace-nowrap">{order.number}</strong>.
-                        </li>
-                        {order.expires_at_text && (
-                            <li>
-                                Paga antes del{' '}
-                                <strong>
-                                    <time dateTime={order.expires_at ?? undefined}>{order.expires_at_text}</time>
-                                </strong>
-                                . Después de esa hora el apartado se cancela y las piezas vuelven a la venta.
-                            </li>
-                        )}
-                        {whatsapp.receipt_url && <li>Mándanos tu comprobante por WhatsApp para confirmar tu pago.</li>}
-                    </ol>
-
-                    {(whatsapp.receipt_url || whatsapp.question_url) && (
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                            {whatsapp.receipt_url && (
-                                <a
-                                    href={whatsapp.receipt_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}
-                                >
-                                    <MessageCircle className="size-5" aria-hidden="true" />
-                                    Enviar comprobante por WhatsApp
-                                </a>
-                            )}
-                            {whatsapp.question_url && (
+                {order.payment_method === 'cash' ? (
+                    <section aria-labelledby="pago" className="store-surface p-5 sm:p-7">
+                        <h2 id="pago" className="store-heading text-2xl sm:text-3xl">
+                            Pago en efectivo
+                        </h2>
+                        <p className="mt-4 leading-relaxed">
+                            Pagas <strong>{formatMoney(order.total)}</strong> en efectivo{' '}
+                            {pickup ? 'cuando pases por tu pedido a la tienda' : 'al recibir tu pedido'}.
+                        </p>
+                        <p className="border-store-border bg-store-bg rounded-store mt-3 border-[length:var(--store-border-width)] px-4 py-3 font-medium">
+                            Ten el efectivo a la mano {pickup ? 'cuando recojas tu pedido' : 'a la hora de la entrega'}. No necesitas hacer
+                            transferencia ni mandar comprobante.
+                        </p>
+                        {whatsapp.question_url && (
+                            <div className="mt-6">
                                 <a
                                     href={whatsapp.question_url}
                                     target="_blank"
@@ -122,10 +94,68 @@ function OrderThanksContent({ order, pickup, bankInfo, whatsapp }: OrderThanksPr
                                 >
                                     Tengo dudas
                                 </a>
+                            </div>
+                        )}
+                    </section>
+                ) : (
+                    <section aria-labelledby="pago" className="store-surface p-5 sm:p-7">
+                        <h2 id="pago" className="store-heading text-2xl sm:text-3xl">
+                            Cómo pagar
+                        </h2>
+                        <ol className="mt-4 list-decimal space-y-3 pl-5 leading-relaxed">
+                            <li>
+                                Haz una transferencia por <strong>{formatMoney(order.total)}</strong> a esta cuenta:
+                                {bankInfo ? (
+                                    <p className="border-store-border bg-store-bg rounded-store mt-2 border-[length:var(--store-border-width)] px-4 py-3 font-medium whitespace-pre-line">
+                                        {bankInfo}
+                                    </p>
+                                ) : (
+                                    <span className="text-store-muted block">Te compartimos los datos de la cuenta por WhatsApp.</span>
+                                )}
+                            </li>
+                            <li>
+                                En el concepto de la transferencia escribe tu número de pedido:{' '}
+                                <strong className="whitespace-nowrap">{order.number}</strong>.
+                            </li>
+                            {order.expires_at_text && (
+                                <li>
+                                    Paga antes del{' '}
+                                    <strong>
+                                        <time dateTime={order.expires_at ?? undefined}>{order.expires_at_text}</time>
+                                    </strong>
+                                    . Después de esa hora el apartado se cancela y las piezas vuelven a la venta.
+                                </li>
                             )}
-                        </div>
-                    )}
-                </section>
+                            {whatsapp.receipt_url && <li>Mándanos tu comprobante por WhatsApp para confirmar tu pago.</li>}
+                        </ol>
+
+                        {(whatsapp.receipt_url || whatsapp.question_url) && (
+                            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                                {whatsapp.receipt_url && (
+                                    <a
+                                        href={whatsapp.receipt_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}
+                                    >
+                                        <MessageCircle className="size-5" aria-hidden="true" />
+                                        Enviar comprobante por WhatsApp
+                                    </a>
+                                )}
+                                {whatsapp.question_url && (
+                                    <a
+                                        href={whatsapp.question_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full sm:w-auto')}
+                                    >
+                                        Tengo dudas
+                                    </a>
+                                )}
+                            </div>
+                        )}
+                    </section>
+                )}
 
                 <section aria-labelledby="resumen" className="store-surface p-5 sm:p-7">
                     <h2 id="resumen" className="store-heading text-2xl sm:text-3xl">

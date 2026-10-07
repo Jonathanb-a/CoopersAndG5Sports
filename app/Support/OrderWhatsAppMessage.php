@@ -79,11 +79,19 @@ class OrderWhatsAppMessage
         }
 
         return match ($order->status) {
-            OrderStatus::Paid => implode("\n", [
-                "{$hello}, recibimos el pago de tu pedido {$order->number} por ".Number::currency((float) $order->total).'. ¡Gracias!',
-                $pickup ? 'Te avisamos en cuanto esté listo para recoger.' : 'Te avisamos en cuanto vaya en camino.',
-                $store,
-            ]),
+            // En efectivo todavía no hay pago que agradecer: se confirma el pedido y se recuerda el cobro.
+            OrderStatus::Paid => $order->paysInCash()
+                ? implode("\n", [
+                    "{$hello}, confirmamos tu pedido {$order->number}.",
+                    'Pagas '.Number::currency((float) $order->total).' en efectivo '.($pickup ? 'al recoger tu pedido.' : 'al recibir tu pedido.'),
+                    'Ten el efectivo a la mano.',
+                    $store,
+                ])
+                : implode("\n", [
+                    "{$hello}, recibimos el pago de tu pedido {$order->number} por ".Number::currency((float) $order->total).'. ¡Gracias!',
+                    $pickup ? 'Te avisamos en cuanto esté listo para recoger.' : 'Te avisamos en cuanto vaya en camino.',
+                    $store,
+                ]),
             OrderStatus::Shipped => $pickup
                 ? implode("\n", [
                     "{$hello}, tu pedido {$order->number} ya está listo para recoger en {$store}.",

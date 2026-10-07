@@ -84,6 +84,7 @@ class OrderController extends Controller
                 'expiring_label' => $order->expiringLabel(),
                 'date' => $this->dateTime($order->created_at),
                 'delivery_label' => $order->delivery_method->getLabel(),
+                'payment_method' => $order->payment_method?->value ?? 'transfer',
                 'shipping_address' => $order->shipping_address,
                 'notes' => $order->notes,
                 'coupon' => $order->coupon?->code,
@@ -121,7 +122,7 @@ class OrderController extends Controller
             'cancellationRequested' => CancellationRequestService::isPending($order),
             'bankInfo' => $reserved ? (trim((string) $store->bank_info) ?: null) : null,
             'whatsapp' => [
-                'receipt_url' => $reserved ? $order->store->whatsappUrl(OrderWhatsAppMessage::receipt($order)) : null,
+                'receipt_url' => $reserved && ! $order->paysInCash() ? $order->store->whatsappUrl(OrderWhatsAppMessage::receipt($order)) : null,
                 'question_url' => $order->store->whatsappUrl(OrderWhatsAppMessage::question($order)),
             ],
             'status' => $request->session()->get('status'),

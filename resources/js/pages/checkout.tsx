@@ -31,6 +31,11 @@ interface CheckoutProps {
     reservationLimit: string | null;
 }
 
+const paymentOptions = [
+    { value: 'transfer', label: 'Transferencia', description: 'Transfieres y nos mandas tu comprobante por WhatsApp.' },
+    { value: 'cash', label: 'Efectivo', description: 'Pagas en efectivo cuando recibas o recojas tu pedido.' },
+];
+
 const emptyLocal = { name: '', point: '', references: '' };
 
 type LocalKey = keyof typeof emptyLocal;
@@ -66,11 +71,13 @@ function Step({ number, title, children }: { number: number; title: string; chil
 function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, reserveHours, reservationLimit }: CheckoutProps) {
     const form = useForm<{
         delivery_method: string;
+        payment_method: string;
         local: typeof emptyLocal;
         phone: string;
         notes: string;
     }>({
         delivery_method: 'recoger',
+        payment_method: 'transfer',
         local: { ...emptyLocal, name: customerName },
         phone: phone ?? '',
         notes: '',
@@ -82,6 +89,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
     const delivery = deliveryOptions.find((option) => option.value === form.data.delivery_method) ?? null;
     const isPickup = form.data.delivery_method === 'recoger';
     const isLocal = form.data.delivery_method === 'local';
+    const isCash = form.data.payment_method === 'cash';
 
     const subtotal = Number(cart.subtotal);
     const discount = Number(cart.discount);
@@ -242,7 +250,46 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                         )}
                     </Step>
 
-                    <Step number={3} title="Contacto">
+                    <Step number={3} title="Forma de pago">
+                        <fieldset>
+                            <legend className="sr-only">Forma de pago</legend>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {paymentOptions.map((option) => (
+                                    <label key={option.value} className={choice(form.data.payment_method === option.value)}>
+                                        <input
+                                            type="radio"
+                                            name="payment_method"
+                                            value={option.value}
+                                            checked={form.data.payment_method === option.value}
+                                            onChange={() => form.setData('payment_method', option.value)}
+                                            className="accent-store-action mt-1 size-5 shrink-0"
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block font-semibold">{option.label}</span>
+                                            <span className="text-store-muted block text-sm">{option.description}</span>
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                            {errors.payment_method && (
+                                <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                                    {errors.payment_method}
+                                </p>
+                            )}
+                        </fieldset>
+                        <p
+                            className="border-store-border bg-store-bg rounded-store mt-4 border-[length:var(--store-border-width)] px-4 py-3 text-sm leading-relaxed font-medium"
+                            aria-live="polite"
+                        >
+                            {isCash
+                                ? isLocal
+                                    ? 'Ten el efectivo a la mano a la hora de la entrega. No necesitas hacer transferencia ni mandar comprobante.'
+                                    : 'Ten el efectivo a la mano cuando pases por tu pedido a la tienda. No necesitas hacer transferencia ni mandar comprobante.'
+                                : `Al apartar te damos los datos de la cuenta. Haces la transferencia y mandas tu comprobante por WhatsApp con tu número de pedido, dentro de las ${reserveHours} horas.`}
+                        </p>
+                    </Step>
+
+                    <Step number={4} title="Contacto">
                         <div className="space-y-4">
                             <Field
                                 label="Teléfono de contacto"
@@ -272,7 +319,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                 <aside aria-label="Total" className="store-surface p-5 sm:p-6 lg:sticky lg:top-32">
                     <h2 className="store-heading flex items-baseline gap-3 text-2xl sm:text-3xl">
                         <span className="text-store-muted text-lg" aria-hidden="true">
-                            4.
+                            5.
                         </span>
                         Total
                     </h2>
@@ -310,7 +357,9 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                         {form.processing ? 'Apartando…' : 'Apartar pedido'}
                     </StoreButton>
                     <p className="text-store-muted mt-3 text-xs leading-relaxed">
-                        Pagas por transferencia. Apartamos tus piezas durante {reserveHours} horas; al confirmar verás los datos para pagar.
+                        {isCash
+                            ? 'Pagas en efectivo al recibir o recoger tu pedido. Apartamos tus piezas hasta ese momento.'
+                            : `Pagas por transferencia. Apartamos tus piezas durante ${reserveHours} horas; al confirmar verás los datos para pagar.`}
                     </p>
                     {form.hasErrors && (
                         <p role="alert" className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">

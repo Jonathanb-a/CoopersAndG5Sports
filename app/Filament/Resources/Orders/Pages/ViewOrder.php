@@ -75,16 +75,19 @@ class ViewOrder extends ViewRecord
             ->visible(fn (Order $record) => $record->status->canTransitionTo(OrderStatus::Paid))
             ->requiresConfirmation()
             ->modalHeading('Marcar pedido como pagado')
-            ->modalDescription('Confirma que ya recibiste la transferencia. Se guarda la fecha de pago.')
-            ->modalSubmitActionLabel('Sí, está pagado')
-            ->schema([
+            ->modalDescription(fn (Order $record) => $record->paysInCash()
+                ? 'El cliente paga en efectivo al entregar. Confirma el pedido para poder prepararlo y enviarlo; el dinero se cobra en la entrega.'
+                : 'Confirma que ya recibiste la transferencia. Se guarda la fecha de pago.')
+            ->modalSubmitActionLabel(fn (Order $record) => $record->paysInCash() ? 'Sí, confirmar pedido' : 'Sí, está pagado')
+            // En efectivo no hay referencia que capturar.
+            ->schema(fn (Order $record) => $record->paysInCash() ? [] : [
                 TextInput::make('payment_reference')
                     ->label('Referencia de pago')
                     ->helperText('Folio o clave de rastreo de la transferencia.')
                     ->required()
                     ->maxLength(255),
             ])
-            ->action(fn (array $data) => $this->changeStatus(OrderStatus::Paid, ['payment_reference' => $data['payment_reference']]));
+            ->action(fn (array $data) => $this->changeStatus(OrderStatus::Paid, ['payment_reference' => $data['payment_reference'] ?? null]));
     }
 
     private function markShippedAction(): Action
@@ -370,7 +373,8 @@ class ViewOrder extends ViewRecord
             ->label('Dar más tiempo')
             ->icon(Heroicon::OutlinedClock)
             ->color('gray')
-            ->visible(fn (Order $record) => $record->status === OrderStatus::Reserved)
+            // Un pedido en efectivo no tiene fecha límite de pago, así que no hay tiempo que darle.
+            ->visible(fn (Order $record) => $record->status === OrderStatus::Reserved && ! $record->paysInCash())
             ->modalHeading('Dar más tiempo para pagar')
             ->modalDescription('Se suma a la fecha límite de pago del pedido.')
             ->modalSubmitActionLabel('Dar más tiempo')

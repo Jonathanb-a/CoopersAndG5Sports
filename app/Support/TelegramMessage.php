@@ -41,9 +41,13 @@ class TelegramMessage
             ])];
         }
 
-        // En la tienda en línea se paga por transferencia; solo cambia si el pedido trae otro método.
-        $lines[] = 'Pago: '.($order->payment_method?->getLabel() ?? PaymentMethod::Transfer->getLabel());
-        $lines[] = 'Paga antes de: '.($order->expires_at ? $order->expires_at->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—');
+        // Por transferencia (lo normal) o en efectivo, que se cobra al entregar o al recoger y no vence.
+        if ($order->paysInCash()) {
+            $lines[] = 'Pago: Efectivo (se cobra '.($order->delivery_method === DeliveryMethod::Pickup ? 'al recoger' : 'al entregar').')';
+        } else {
+            $lines[] = 'Pago: '.($order->payment_method?->getLabel() ?? PaymentMethod::Transfer->getLabel());
+            $lines[] = 'Paga antes de: '.($order->expires_at ? $order->expires_at->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—');
+        }
 
         return implode("\n", $lines);
     }

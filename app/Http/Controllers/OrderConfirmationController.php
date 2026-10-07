@@ -40,6 +40,8 @@ class OrderConfirmationController extends Controller
                 'number' => $order->number,
                 'status' => $order->status->getLabel(),
                 'delivery_method' => $order->delivery_method->value,
+                // Los pedidos anteriores a elegir la forma de pago eran por transferencia.
+                'payment_method' => $order->payment_method?->value ?? 'transfer',
                 'delivery_label' => $order->delivery_method->getLabel(),
                 'shipping_address' => $order->shipping_address,
                 'notes' => $order->notes,
@@ -66,7 +68,8 @@ class OrderConfirmationController extends Controller
             'bankInfo' => trim((string) $store->bank_info) ?: null,
             // WhatsApp de la tienda del pedido, con el mensaje ya escrito. Null si la tienda no tiene número.
             'whatsapp' => [
-                'receipt_url' => $order->store->whatsappUrl(OrderWhatsAppMessage::receipt($order)),
+                // El comprobante es solo de la transferencia; en efectivo se paga al entregar.
+                'receipt_url' => $order->paysInCash() ? null : $order->store->whatsappUrl(OrderWhatsAppMessage::receipt($order)),
                 'question_url' => $order->store->whatsappUrl(OrderWhatsAppMessage::question($order)),
             ],
         ]);

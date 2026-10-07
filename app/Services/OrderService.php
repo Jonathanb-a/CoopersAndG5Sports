@@ -53,6 +53,7 @@ class OrderService
      * CartChangedException con los avisos; el carrito de la sesión queda ya corregido.
      *
      * @param  array<string, mixed>|null  $shippingAddress  dirección de entrega (null al recoger en tienda)
+     * @param  PaymentMethod  $paymentMethod  transferencia (vence en shop.reserve_hours) o efectivo (se paga al entregar y no vence)
      *
      * @throws CartChangedException
      * @throws ReservationLimitException si el cliente ya tiene el máximo de apartados sin pagar en la tienda
@@ -64,12 +65,18 @@ class OrderService
         ?array $shippingAddress,
         string $phone,
         ?string $notes = null,
+        PaymentMethod $paymentMethod = PaymentMethod::Transfer,
     ): Order {
+        // La tienda en línea solo cobra por transferencia o en efectivo (al recibir o recoger).
+        if (! in_array($paymentMethod, [PaymentMethod::Transfer, PaymentMethod::Cash], true)) {
+            throw new InvalidArgumentException("La tienda en línea no acepta el método de pago [{$paymentMethod->value}].");
+        }
+
         $shipping = $this->deliveryOptions($store)[$method->value]
             ?? throw new InvalidArgumentException("La tienda no ofrece el método de entrega [{$method->value}].");
 
         try {
-            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping) {
+            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping, $paymentMethod) {
                 // Bloqueos primero y siempre en el mismo orden (tienda, tallas, cupón): dos pedidos de la
                 // misma tienda entran uno tras otro, así el número es consecutivo y nadie se lleva la
                 // misma pieza. Todo lo que se lee después ya ve los datos definitivos.
@@ -121,7 +128,9 @@ class OrderService
                     'shipping_cost' => CouponResult::money($shipping),
                     'total' => CouponResult::money($subtotal - $discount + $shipping),
                     'coupon_id' => $applied?->coupon->id,
-                    'expires_at' => now()->addHours((int) config('shop.reserve_hours', 48)),
+                    'payment_method' => $paymentMethod,
+                    // El pago en efectivo se hace al entregar: no hay plazo para pagar, así que no vence solo.
+                    'expires_at' => $paymentMethod === PaymentMethod::Cash ? null : now()->addHours((int) config('shop.reserve_hours', 48)),
                     'notes' => filled($notes) ? trim($notes) : null,
                 ]);
 

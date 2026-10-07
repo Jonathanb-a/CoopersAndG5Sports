@@ -179,3 +179,17 @@ Sensación: cancha y calle, energía, grafiti.
   no siempre puede cumplirlos, así que la fecha y el horario los acuerda el
   admin por WhatsApp y los captura en delivery_scheduled_date y delivery_window.
 - La entrega local no usa la libreta de direcciones del cliente.
+
+## Forma de pago en la tienda en línea (fase 5)
+- El checkout pregunta cómo se paga: transferencia (por defecto) o efectivo.
+  Se guarda en orders.payment_method (PaymentMethod). Tarjeta no se acepta en
+  la tienda en línea. Los pedidos sin dato se tratan como transferencia.
+- Transferencia: igual que antes. Vence en shop.reserve_hours y el cliente manda
+  su comprobante por WhatsApp con su número de pedido.
+- Efectivo: se paga al recibir (entrega local) o al recoger. No tiene fecha
+  límite de pago (expires_at null), así que orders:expire-unpaid no lo
+  cancela y no se le "da más tiempo". Sigue contando para
+  shop.max_open_reservations y se cancela a mano (regresa el stock).
+- Al confirmar un pedido en efectivo, "Marcar pagado" no pide referencia y
+  solo lo deja listo para prepararse y enviarse: el dinero se cobra en la
+  entrega. El aviso de WhatsApp lo dice así (no agradece un pago).

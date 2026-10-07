@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Http\Controllers\Controller;
@@ -85,6 +86,7 @@ class OrderController extends Controller
                 'delivery_label' => $order->delivery_method->getLabel(),
                 'shipping_address' => $order->shipping_address,
                 'notes' => $order->notes,
+                'delivery_preference' => $order->deliveryPreference(),
                 'coupon' => $order->coupon?->code,
                 'subtotal' => $order->subtotal,
                 'discount' => $order->discount,
@@ -115,6 +117,8 @@ class OrderController extends Controller
                 'request_cancellation' => CancellationRequestService::canRequest($order),
             ],
             'delivery' => $this->delivery($order),
+            // Dónde y cuándo recoger, solo si el pedido se recoge en tienda.
+            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? $store->pickupInfo() : null,
             'cancellationRequested' => CancellationRequestService::isPending($order),
             'bankInfo' => $reserved ? (trim((string) $store->bank_info) ?: null) : null,
             'whatsapp' => [

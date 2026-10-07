@@ -212,7 +212,7 @@ class TelegramNotifierTest extends TestCase
 
         $this->checkout($shirt, 2, data: [
             'delivery_method' => 'local',
-            'address' => ['street' => 'Calle Hidalgo 5', 'neighborhood' => 'Centro', 'city' => 'Zihuatanejo', 'state' => 'Guerrero', 'zip' => '40880'],
+            'local' => ['name' => 'Ana Pérez', 'point' => 'Calle Hidalgo 5, Centro'],
         ])->assertSessionHasNoErrors();
         $this->checkout($ball, host: self::G5)->assertSessionHasNoErrors();
 

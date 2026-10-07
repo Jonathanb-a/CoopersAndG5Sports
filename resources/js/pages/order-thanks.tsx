@@ -1,5 +1,6 @@
 import { buttonVariants } from '@/components/store/button';
 import { Container } from '@/components/store/container';
+import { DeliveryAddress, PickupInfo, type PickupInfoData } from '@/components/store/delivery-info';
 import { Reveal } from '@/components/store/reveal';
 import { Tag } from '@/components/store/tag';
 import { formatMoney } from '@/lib/store';
@@ -27,6 +28,8 @@ interface OrderThanksProps {
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
+        /** Día y hora que pidió el cliente para su entrega local. */
+        delivery_preference: string | null;
         coupon: string | null;
         subtotal: string;
         discount: string;
@@ -36,6 +39,8 @@ interface OrderThanksProps {
         expires_at_text: string | null;
         items: OrderItem[];
     };
+    /** Dónde y cuándo recoger; null si el pedido no se recoge en tienda. */
+    pickup: PickupInfoData | null;
     bankInfo: string | null;
     /** Enlaces wa.me de la tienda del pedido con el mensaje ya escrito; null si la tienda no tiene WhatsApp. */
     whatsapp: { receipt_url: string | null; question_url: string | null };
@@ -53,7 +58,7 @@ export default function OrderThanks(props: OrderThanksProps) {
 }
 
 /** Confirmación del pedido apartado: número, cómo pagar por transferencia, fecha límite y resumen. */
-function OrderThanksContent({ order, bankInfo, whatsapp }: OrderThanksProps) {
+function OrderThanksContent({ order, pickup, bankInfo, whatsapp }: OrderThanksProps) {
     const address = order.shipping_address;
 
     return (
@@ -169,17 +174,8 @@ function OrderThanksContent({ order, bankInfo, whatsapp }: OrderThanksProps) {
                         Entrega
                     </h2>
                     <p className="mt-3 font-semibold">{order.delivery_label}</p>
-                    {address && (
-                        <address className="text-store-text mt-2 text-sm leading-relaxed not-italic">
-                            {address.name}
-                            <br />
-                            {address.street}, {address.neighborhood}, C.P. {address.zip}
-                            <br />
-                            {address.city}, {address.state}
-                            {address.notes && <span className="text-store-muted block">Referencias: {address.notes}</span>}
-                            {address.phone && <span className="block">Tel. {address.phone}</span>}
-                        </address>
-                    )}
+                    {pickup && <PickupInfo pickup={pickup} className="mt-3" />}
+                    {address && <DeliveryAddress address={address} preference={order.delivery_preference} showPhone />}
                     {order.notes && (
                         <p className="text-store-muted mt-3 text-sm">
                             <span className="text-store-text font-semibold">Notas:</span> {order.notes}

@@ -22,6 +22,7 @@ use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\CouponService;
+use App\Services\OrderService;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -99,6 +100,15 @@ class CheckoutTest extends TestCase
             'phone' => '755 123 4567',
             ...$data,
         ]);
+    }
+
+    /** Datos del checkout para una entrega local en Zihuatanejo. */
+    private function local(array $extra = []): array
+    {
+        return [
+            'delivery_method' => 'local',
+            'local' => ['name' => 'Ana Pérez', 'point' => 'Calle Hidalgo 5, Centro', 'references' => 'Portón negro', ...$extra],
+        ];
     }
 
     private function addressData(array $extra = []): array
@@ -365,7 +375,7 @@ class CheckoutTest extends TestCase
     {
         $this->travelTo('2026-10-05 10:30:00');
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa Oxford', ['M' => 5], ['price' => 1700])), 2);
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData()]);
+        $this->place([...$this->local()]);
 
         $this->actingAs($this->ana, 'customer')->get(self::COPPERS.'/pedido/CP-00001/gracias')
             ->assertOk()
@@ -377,7 +387,7 @@ class CheckoutTest extends TestCase
                 ->where('order.shipping_cost', '80.00')
                 ->where('order.total', '3480.00')
                 ->where('order.delivery_method', 'local')
-                ->where('order.shipping_address.street', 'Calle Hidalgo 5')
+                ->where('order.shipping_address.street', 'Calle Hidalgo 5, Centro')
                 ->where('order.expires_at_text', 'miércoles 7 de octubre de 2026, 10:30')
                 ->has('order.items', 1)
                 ->where('order.items.0.name', 'Camisa Oxford')
@@ -396,16 +406,16 @@ class CheckoutTest extends TestCase
         $coupon = Coupon::create(['store_id' => $this->coppers->id, 'code' => 'VERANO', 'type' => CouponType::Percent, 'value' => 15, 'max_uses' => 10, 'used_count' => 4]);
         $this->post(self::COPPERS.'/carrito/cupon', ['code' => 'VERANO'])->assertSessionHasNoErrors();
 
-        $this->place(['delivery_method' => 'nacional', 'address' => $this->addressData()])
+        $this->place($this->local())
             ->assertRedirect(self::COPPERS.'/pedido/CP-00001/gracias');
 
         $order = Order::withoutGlobalScopes()->sole();
 
-        // 2 × 500 + 3 × 99.90 = 1299.70; 15 % = 194.955 → 194.96; envío nacional 250.
+        // 2 × 500 + 3 × 99.90 = 1299.70; 15 % = 194.955 → 194.96; entrega local 80.
         $this->assertSame('1299.70', $order->subtotal);
         $this->assertSame('194.96', $order->discount);
-        $this->assertSame('250.00', $order->shipping_cost);
-        $this->assertSame('1354.74', $order->total);
+        $this->assertSame('80.00', $order->shipping_cost);
+        $this->assertSame('1184.74', $order->total);
         $this->assertEqualsWithDelta((float) $order->subtotal - (float) $order->discount + (float) $order->shipping_cost, (float) $order->total, 0.001);
 
         // El subtotal coincide con las líneas guardadas.
@@ -424,7 +434,7 @@ class CheckoutTest extends TestCase
         Coupon::create(['store_id' => $this->coppers->id, 'code' => 'GRANDE', 'type' => CouponType::Fixed, 'value' => 500]);
         $this->post(self::COPPERS.'/carrito/cupon', ['code' => 'GRANDE']);
 
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData()]);
+        $this->place([...$this->local()]);
 
         $order = Order::withoutGlobalScopes()->sole();
 
@@ -436,8 +446,7 @@ class CheckoutTest extends TestCase
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa', ['M' => 5], ['price' => 500])));
 
         $this->place([
-            'delivery_method' => 'local',
-            'address' => $this->addressData(),
+            ...$this->local(),
             'total' => 1, 'subtotal' => 1, 'discount' => 499, 'shipping_cost' => 0, 'status' => 'pagado', 'number' => 'HACK-1', 'customer_id' => 999,
         ]);
 
@@ -534,13 +543,13 @@ class CheckoutTest extends TestCase
 
     // ---- Entrega, dirección y contacto --------------------------------------------------------
 
-    public function test_the_checkout_page_offers_the_delivery_methods_the_store_has_a_cost_for()
+    public function test_the_checkout_page_offers_only_pickup_and_local_delivery()
     {
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa', ['M' => 5], ['price' => 500])), 2);
         $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5])), host: self::G5);
         $this->ana->update(['phone' => '7551112233']);
-        $this->ana->addresses()->create($this->addressData());
 
+        // Copper's cobra 80 la entrega local (y tiene costo nacional guardado, que ya no se ofrece).
         $this->actingAs($this->ana, 'customer')->get(self::COPPERS.'/checkout')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -549,181 +558,238 @@ class CheckoutTest extends TestCase
                 ->where('cart.discount', '0.00')
                 ->has('cart.lines', 1)
                 ->where('deliveryOptions', [
-                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null, 'available' => true],
-                    ['value' => 'local', 'label' => 'Entrega a domicilio', 'description' => 'Solo Zihuatanejo', 'cost' => '80.00', 'needs_address' => true, 'note' => 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega', 'available' => true],
-                    ['value' => 'nacional', 'label' => 'Envío a todo el estado', 'description' => 'Te lo mandamos por paquetería.', 'cost' => '250.00', 'needs_address' => true, 'note' => null, 'available' => true],
+                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00'],
+                    ['value' => 'local', 'label' => 'Entrega local (Zihuatanejo)', 'description' => 'Te lo llevamos al punto que nos digas en Zihuatanejo.', 'cost' => '80.00'],
                 ])
-                ->has('addresses', 1)
-                ->where('addresses.0.street', 'Calle Hidalgo 5')
+                ->where('customerName', 'Ana Pérez')
                 ->where('phone', '7551112233')
-                ->where('reserveHours', 48));
+                ->where('reserveHours', 48)
+                ->missing('addresses'));
 
-        // G5 no tiene costos: solo se puede recoger en tienda, y el envío al estado sale como «Próximamente».
+        // G5 no tiene ningún costo configurado: salen las mismas dos, la local gratis.
         $this->actingAs($this->ana, 'customer')->get(self::G5.'/checkout')
             ->assertInertia(fn (Assert $page) => $page
-                ->where('deliveryOptions', [
-                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null, 'available' => true],
-                    ['value' => 'nacional', 'label' => 'Envío a todo el estado', 'description' => 'Estamos preparando los envíos a todo el estado.', 'cost' => null, 'needs_address' => false, 'note' => null, 'available' => false],
-                ]));
-    }
-
-    public function test_recoger_is_always_the_first_option_and_local_shows_only_when_configured()
-    {
-        $this->g5->update(['local_shipping_cost' => 0]);
-        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5])), host: self::G5);
-
-        // Costo 0: se ofrece y la pantalla lo pinta como «Gratis» (cost 0.00).
-        $this->actingAs($this->ana, 'customer')->get(self::G5.'/checkout')
-            ->assertInertia(fn (Assert $page) => $page
-                ->has('deliveryOptions', 3)
+                ->has('deliveryOptions', 2)
                 ->where('deliveryOptions.0.value', 'recoger')
                 ->where('deliveryOptions.1.value', 'local')
-                ->where('deliveryOptions.1.cost', '0.00')
-                ->where('deliveryOptions.1.description', 'Solo Zihuatanejo')
-                ->where('deliveryOptions.1.available', true)
-                ->where('deliveryOptions.2.value', 'nacional')
-                ->where('deliveryOptions.2.available', false));
+                ->where('deliveryOptions.1.cost', '0.00'));
+
+        // Ni con costo nacional en las dos tiendas aparece el envío nacional o un «Próximamente».
+        $this->g5->update(['national_shipping_cost' => 300]);
+        foreach ([self::COPPERS, self::G5] as $host) {
+            $this->get("{$host}/checkout")->assertInertia(fn (Assert $page) => $page
+                ->where('deliveryOptions', fn ($options) => collect($options)->pluck('value')->all() === ['recoger', 'local']
+                    && ! str_contains(json_encode($options, JSON_UNESCAPED_UNICODE), 'nacional')
+                    && ! str_contains(json_encode($options, JSON_UNESCAPED_UNICODE), 'Próximamente')));
+        }
     }
 
-    public function test_the_coming_soon_shipping_can_not_be_forced_from_the_browser()
+    public function test_local_delivery_is_always_available_and_free_without_a_configured_cost()
     {
-        // G5 ofrece local pero no nacional: el «Próximamente» no se puede mandar a mano.
-        $this->g5->update(['local_shipping_cost' => 60]);
-        $variant = $this->variant($this->product($this->g5, 'Tenis', ['27' => 5]));
-        $this->addToCart($variant, host: self::G5);
+        $this->assertNull($this->g5->local_shipping_cost);
+        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5], ['price' => 900])), host: self::G5);
 
-        $this->place([
-            'delivery_method' => 'nacional', 'address' => $this->addressData(),
-            'available' => true, 'shipping_cost' => 0, 'cost' => 0,
-        ], host: self::G5)->assertSessionHasErrors(['delivery_method' => 'Ese método de entrega no está disponible en esta tienda.']);
+        $this->place($this->local(), host: self::G5)->assertRedirect(self::G5.'/pedido/G5-00001/gracias');
 
-        $this->assertSame(0, Order::withoutGlobalScopes()->count());
-        $this->assertSame(0, Address::count());
-        $this->assertSame(5, $variant->fresh()->stock);
+        $order = Order::withoutGlobalScopes()->sole();
+
+        $this->assertSame(DeliveryMethod::Local, $order->delivery_method);
+        $this->assertSame(['900.00', '0.00', '900.00'], [$order->subtotal, $order->shipping_cost, $order->total]);
+
+        // Con 0 capturado también es gratis.
+        $this->g5->update(['local_shipping_cost' => 0]);
+        $this->addToCart($this->variant($this->product($this->g5, 'Balón', ['5' => 5], ['price' => 300])), host: self::G5);
+        $this->place($this->local(), host: self::G5)->assertSessionHasNoErrors();
+
+        $second = Order::withoutGlobalScopes()->latest('id')->first();
+        $this->assertSame(['0.00', '300.00'], [$second->shipping_cost, $second->total]);
     }
 
-    public function test_each_store_charges_its_own_shipping_cost_from_the_database()
+    public function test_local_delivery_with_a_cost_adds_it_to_the_total_from_the_database()
     {
         $this->g5->update(['local_shipping_cost' => 45.5]);
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa', ['M' => 5], ['price' => 500])));
         $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5], ['price' => 900])), host: self::G5);
 
-        // El navegador manda otro costo en las dos: gana siempre el de la tienda.
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData(), 'shipping_cost' => 1, 'cost' => 1]);
-        $this->place(['delivery_method' => 'local', 'address_id' => $this->ana->addresses()->sole()->id, 'shipping_cost' => 1, 'cost' => 1], host: self::G5);
+        // El navegador manda otro costo en las dos: gana siempre el de cada tienda.
+        $this->place([...$this->local(), 'shipping_cost' => 1, 'cost' => 1, 'total' => 1]);
+        $this->place([...$this->local(), 'shipping_cost' => 1, 'cost' => 1, 'total' => 1], host: self::G5);
 
         $coppers = Order::withoutGlobalScopes()->where('store_id', $this->coppers->id)->sole();
         $g5 = Order::withoutGlobalScopes()->where('store_id', $this->g5->id)->sole();
 
         $this->assertSame(['80.00', '580.00'], [$coppers->shipping_cost, $coppers->total]);
         $this->assertSame(['45.50', '945.50'], [$g5->shipping_cost, $g5->total]);
-
-        // Copper's sí ofrece nacional; G5 no, aunque la otra tienda lo tenga.
-        $this->addToCart($this->variant($this->product($this->g5, 'Balón', ['5' => 5])), host: self::G5);
-        $this->place(['delivery_method' => 'nacional', 'address' => $this->addressData()], host: self::G5)
-            ->assertSessionHasErrors('delivery_method');
-        $this->assertSame(2, Order::withoutGlobalScopes()->count());
     }
 
-    public function test_a_free_delivery_method_is_offered_when_its_cost_is_zero()
+    public function test_national_shipping_is_rejected_by_the_server_even_if_the_store_has_a_cost()
     {
-        $this->g5->update(['local_shipping_cost' => 0]);
-        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5], ['price' => 900])), host: self::G5);
+        // Copper's tiene costo nacional guardado de antes: no importa, ya no se acepta.
+        $this->assertSame('250.00', $this->coppers->fresh()->national_shipping_cost);
+        $variant = $this->variant($this->product($this->coppers, 'Camisa'));
+        $this->addToCart($variant);
 
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData()], host: self::G5)
-            ->assertRedirect(self::G5.'/pedido/G5-00001/gracias');
-
-        $order = Order::withoutGlobalScopes()->sole();
-
-        $this->assertSame(['0.00', '900.00'], [$order->shipping_cost, $order->total]);
-    }
-
-    public function test_a_delivery_method_the_store_does_not_offer_is_rejected()
-    {
-        $variant = $this->variant($this->product($this->g5, 'Tenis', ['27' => 5]));
-        $this->addToCart($variant, host: self::G5);
-
-        foreach (['local', 'nacional', 'dron', ''] as $method) {
-            $this->place(['delivery_method' => $method, 'address' => $this->addressData()], host: self::G5)
-                ->assertSessionHasErrors('delivery_method');
+        foreach (['nacional', 'dron', ''] as $method) {
+            $this->place([
+                'delivery_method' => $method,
+                'address' => $this->addressData(),
+                'local' => $this->local()['local'],
+                'available' => true, 'shipping_cost' => 0,
+            ])->assertSessionHasErrors('delivery_method');
         }
 
+        $this->place(['delivery_method' => 'nacional', 'address' => $this->addressData()])
+            ->assertSessionHasErrors(['delivery_method' => 'Ese método de entrega no está disponible en esta tienda.']);
+
         $this->assertSame(0, Order::withoutGlobalScopes()->count());
+        $this->assertSame(0, Address::count());
         $this->assertSame(5, $variant->fresh()->stock);
+
+        // El valor del enum y los pedidos nacionales de antes siguen existiendo.
+        $this->assertSame('nacional', DeliveryMethod::National->value);
     }
 
     public function test_pickup_needs_no_address_and_is_free()
     {
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
-        $this->place();
+        // Aunque mande datos de entrega local, al recoger no se guardan.
+        $this->place(['local' => ['name' => 'Otro', 'point' => 'Otro lado', 'preferred_date' => today()->toDateString(), 'preferred_window' => 'Tarde']]);
 
         $order = Order::withoutGlobalScopes()->sole();
 
+        $this->assertSame(DeliveryMethod::Pickup, $order->delivery_method);
         $this->assertNull($order->shipping_address);
+        $this->assertNull($order->delivery_preferred_date);
+        $this->assertNull($order->delivery_preferred_window);
         $this->assertSame('0.00', $order->shipping_cost);
-        $this->assertSame(0, Address::count());
     }
 
-    public function test_delivery_with_a_new_address_saves_it_in_the_address_book_and_in_the_order()
+    public function test_local_delivery_saves_the_point_and_the_customers_preference_apart_from_the_confirmed_date()
     {
+        $this->travelTo('2026-10-05 10:30:00');
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData()]);
+        $this->place($this->local([
+            'name' => ' Luisa Pérez ', 'point' => ' Hotel Sol, lobby ', 'references' => ' Frente a la playa ',
+            'preferred_date' => '2026-10-08', 'preferred_window' => ' Entre 4 y 6 pm ',
+        ]))->assertRedirect(self::COPPERS.'/pedido/CP-00001/gracias');
 
         $order = Order::withoutGlobalScopes()->sole();
 
         $this->assertSame([
-            'street' => 'Calle Hidalgo 5', 'neighborhood' => 'Centro', 'city' => 'Zihuatanejo', 'state' => 'Guerrero', 'zip' => '40880', 'notes' => 'Portón negro',
-            'name' => 'Ana Pérez', 'phone' => '755 123 4567',
+            'name' => 'Luisa Pérez', 'phone' => '755 123 4567', 'street' => 'Hotel Sol, lobby', 'city' => 'Zihuatanejo', 'notes' => 'Frente a la playa',
         ], $order->shipping_address);
 
-        $saved = $this->ana->addresses()->sole();
-        $this->assertSame('Calle Hidalgo 5', $saved->street);
+        // La preferencia va aparte: la fecha confirmada sigue vacía hasta que la ponga el admin.
+        $this->assertSame('2026-10-08', $order->delivery_preferred_date->toDateString());
+        $this->assertSame('Entre 4 y 6 pm', $order->delivery_preferred_window);
+        $this->assertSame('jueves 8 de octubre de 2026 · Entre 4 y 6 pm', $order->deliveryPreference());
+        $this->assertNull($order->delivery_scheduled_date);
+        $this->assertNull($order->delivery_window);
+
+        // No se guarda en la libreta de direcciones.
+        $this->assertSame(0, Address::count());
+
+        // La página de gracias la muestra.
+        $this->actingAs($this->ana, 'customer')->get(self::COPPERS.'/pedido/CP-00001/gracias')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('order.shipping_address.street', 'Hotel Sol, lobby')
+                ->where('order.delivery_preference', 'jueves 8 de octubre de 2026 · Entre 4 y 6 pm')
+                ->where('pickup', null));
     }
 
-    public function test_delivery_with_a_saved_address_uses_it_without_duplicating_it()
+    public function test_the_day_and_time_preference_are_optional()
     {
-        $address = $this->ana->addresses()->create($this->addressData(['street' => 'Av. Palmas 12']));
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
-        $this->place(['delivery_method' => 'nacional', 'address_id' => $address->id]);
+        $this->place(['delivery_method' => 'local', 'local' => ['name' => 'Ana Pérez', 'point' => 'Calle Hidalgo 5']])
+            ->assertSessionHasNoErrors();
 
         $order = Order::withoutGlobalScopes()->sole();
 
-        $this->assertSame('Av. Palmas 12', $order->shipping_address['street']);
-        $this->assertSame(1, Address::count());
-
-        // El pedido guarda una copia: cambiar la libreta después no lo altera.
-        $address->update(['street' => 'Otra calle']);
-        $this->assertSame('Av. Palmas 12', $order->fresh()->shipping_address['street']);
+        $this->assertNull($order->delivery_preferred_date);
+        $this->assertNull($order->delivery_preferred_window);
+        $this->assertNull($order->deliveryPreference());
+        $this->assertNull($order->shipping_address['notes']);
     }
 
-    public function test_another_customers_address_can_not_be_used()
+    public function test_local_delivery_requires_who_receives_and_the_delivery_point()
     {
-        $luis = Customer::factory()->create();
-        $theirs = $luis->addresses()->create($this->addressData(['street' => 'Casa de Luis']));
+        $this->travelTo('2026-10-05 10:30:00');
         $variant = $this->variant($this->product($this->coppers, 'Camisa'));
         $this->addToCart($variant);
 
-        $this->place(['delivery_method' => 'local', 'address_id' => $theirs->id])->assertSessionHasErrors('address_id');
+        $this->place(['delivery_method' => 'local'])->assertSessionHasErrors('local');
+        $this->place(['delivery_method' => 'local', 'local' => ['name' => '', 'point' => '']])
+            ->assertSessionHasErrors(['local.name', 'local.point' => 'Escribe el punto de entrega o la dirección en Zihuatanejo.']);
+        $this->place(['delivery_method' => 'local', 'local' => ['name' => 'Ana', 'point' => '   ']])
+            ->assertSessionHasErrors('local.point');
+        $this->place($this->local(['preferred_date' => '2026-10-04']))
+            ->assertSessionHasErrors(['local.preferred_date' => 'El día preferido no puede ser anterior a hoy.']);
+        $this->place($this->local(['preferred_date' => 'mañana']))->assertSessionHasErrors('local.preferred_date');
 
         $this->assertSame(0, Order::withoutGlobalScopes()->count());
         $this->assertSame(5, $variant->fresh()->stock);
+
+        // Hoy mismo sí se vale.
+        $this->place($this->local(['preferred_date' => '2026-10-05']))->assertSessionHasNoErrors();
+        $this->assertSame(1, Order::withoutGlobalScopes()->count());
     }
 
-    public function test_delivery_without_an_address_or_with_a_bad_one_is_rejected()
+    // ---- Recoger en tienda: datos de SU tienda ----------------------------------------------------
+
+    public function test_the_pickup_box_uses_the_data_of_the_current_store()
     {
-        $variant = $this->variant($this->product($this->coppers, 'Camisa'));
-        $this->addToCart($variant);
+        $this->coppers->update([
+            'pickup_address' => 'Av. Juan Álvarez 12, Centro, Zihuatanejo',
+            'pickup_hours' => 'Lun a Sáb 10:00 a 19:00',
+            'pickup_map_url' => 'https://maps.app.goo.gl/coppers',
+            'pickup_notes' => 'Local 4, junto a la farmacia',
+        ]);
+        $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
+        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5])), host: self::G5);
 
-        $this->place(['delivery_method' => 'local'])->assertSessionHasErrors('address');
-        $this->place(['delivery_method' => 'local', 'address' => $this->addressData(['zip' => '123', 'street' => ''])])
-            ->assertSessionHasErrors(['address.zip' => 'El código postal debe tener 5 dígitos.', 'address.street']);
+        $coppers = [
+            'configured' => true,
+            'address' => 'Av. Juan Álvarez 12, Centro, Zihuatanejo',
+            'hours' => 'Lun a Sáb 10:00 a 19:00',
+            'map_url' => 'https://maps.app.goo.gl/coppers',
+            'notes' => 'Local 4, junto a la farmacia',
+        ];
+        $empty = ['configured' => false, 'address' => null, 'hours' => null, 'map_url' => null, 'notes' => null];
 
-        $this->assertSame(0, Order::withoutGlobalScopes()->count());
-        $this->assertSame(0, Address::count());
-        $this->assertSame(5, $variant->fresh()->stock);
+        $this->actingAs($this->ana, 'customer');
+        $this->get(self::COPPERS.'/checkout')->assertInertia(fn (Assert $page) => $page->where('pickup', $coppers));
+        // G5 todavía no captura nada: la pantalla dice que se confirma por WhatsApp.
+        $this->get(self::G5.'/checkout')->assertInertia(fn (Assert $page) => $page->where('pickup', $empty));
+
+        // Los mismos datos salen en la página de gracias y en el detalle del pedido, cada quien los de su tienda.
+        $this->place()->assertRedirect(self::COPPERS.'/pedido/CP-00001/gracias');
+        $this->place(host: self::G5)->assertRedirect(self::G5.'/pedido/G5-00001/gracias');
+
+        $this->get(self::COPPERS.'/pedido/CP-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', $coppers));
+        $this->get(self::COPPERS.'/mi-cuenta/pedidos/CP-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', $coppers));
+        $this->get(self::G5.'/pedido/G5-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', $empty));
+        $this->get(self::G5.'/mi-cuenta/pedidos/G5-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', $empty));
+
+        // Un pedido de entrega local no lleva el recuadro de recoger.
+        $this->addToCart($this->variant($this->product($this->coppers, 'Pantalón')));
+        $this->place($this->local());
+        $this->get(self::COPPERS.'/pedido/CP-00002/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', null));
+        $this->get(self::COPPERS.'/mi-cuenta/pedidos/CP-00002')->assertInertia(fn (Assert $page) => $page
+            ->where('pickup', null)
+            ->where('order.shipping_address.street', 'Calle Hidalgo 5, Centro'));
+    }
+
+    public function test_with_only_the_hours_captured_the_pickup_box_is_configured()
+    {
+        $this->g5->update(['pickup_hours' => '  Todos los días 9 a 9  ']);
+
+        $this->assertSame(
+            ['configured' => true, 'address' => null, 'hours' => 'Todos los días 9 a 9', 'map_url' => null, 'notes' => null],
+            $this->g5->pickupInfo(),
+        );
     }
 
     public function test_the_contact_phone_is_required_and_saved_on_the_customer()
@@ -814,65 +880,87 @@ class CheckoutTest extends TestCase
         Filament::setTenant($store);
     }
 
-    public function test_the_owner_sets_the_shipping_costs_in_store_profile()
+    public function test_the_owner_sets_the_pickup_data_and_the_optional_local_cost_in_store_profile()
     {
         $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->g5);
 
         Livewire::test(EditStoreProfile::class)
-            ->assertSee('Envíos')
-            ->assertSee('Ofrecer entrega a domicilio en Zihuatanejo')
-            ->assertSee('Ofrecer envíos a todo el estado/país')
-            ->assertFormSet(['offers_local_delivery' => false, 'offers_national_shipping' => false])
-            ->fillForm(['name' => 'Sports G5', 'offers_local_delivery' => true, 'local_shipping_cost' => 60, 'is_active' => true])
+            ->assertSee('Recoger en tienda')
+            ->assertSee('Dirección de la tienda')
+            ->assertSee('Horario para recoger')
+            ->assertSee('Enlace de Google Maps')
+            ->assertSee('Indicaciones')
             ->assertSee('Costo de entrega local')
+            // Ya no hay interruptores ni nada del envío a todo el estado.
+            ->assertDontSee('Ofrecer entrega a domicilio')
+            ->assertDontSee('Ofrecer envíos a todo el estado')
+            ->assertDontSee('Costo de envío nacional')
+            ->assertDontSee('Próximamente')
+            ->fillForm([
+                'name' => 'Sports G5',
+                'pickup_address' => 'Calle Cuauhtémoc 8, Centro',
+                'pickup_hours' => 'Lun a Sáb 10:00 a 19:00',
+                'pickup_map_url' => 'https://maps.app.goo.gl/g5',
+                'pickup_notes' => 'Segundo piso',
+                'local_shipping_cost' => 60,
+                'is_active' => true,
+            ])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $this->g5->refresh();
 
-        $this->assertSame('60.00', $this->g5->local_shipping_cost);
-        $this->assertNull($this->g5->national_shipping_cost);
+        $this->assertSame(
+            ['Calle Cuauhtémoc 8, Centro', 'Lun a Sáb 10:00 a 19:00', 'https://maps.app.goo.gl/g5', 'Segundo piso', '60.00'],
+            [$this->g5->pickup_address, $this->g5->pickup_hours, $this->g5->pickup_map_url, $this->g5->pickup_notes, $this->g5->local_shipping_cost],
+        );
 
-        // Con 0 se ofrece gratis.
+        // El costo local es opcional: vacío se guarda como null y la entrega sigue ofreciéndose, gratis.
         Livewire::test(EditStoreProfile::class)
-            ->assertFormSet(['offers_local_delivery' => true, 'offers_national_shipping' => false])
-            ->fillForm(['local_shipping_cost' => 0, 'offers_national_shipping' => true, 'national_shipping_cost' => 249.9])
+            ->fillForm(['local_shipping_cost' => null, 'pickup_map_url' => null, 'pickup_notes' => null])
             ->call('save')
             ->assertHasNoFormErrors();
 
-        $this->assertSame(['0.00', '249.90'], [$this->g5->refresh()->local_shipping_cost, $this->g5->national_shipping_cost]);
+        $this->assertNull($this->g5->refresh()->local_shipping_cost);
+        $this->assertNull($this->g5->pickup_map_url);
+        $this->assertSame(['recoger' => 0, 'local' => 0], app(OrderService::class)->deliveryOptions($this->g5));
     }
 
-    public function test_turning_a_shipping_switch_off_saves_the_cost_as_null()
+    public function test_saving_the_profile_does_not_touch_the_stored_national_cost_or_the_other_store()
     {
         $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->coppers);
 
         Livewire::test(EditStoreProfile::class)
-            ->assertFormSet(['offers_local_delivery' => true, 'offers_national_shipping' => true])
-            ->fillForm(['offers_national_shipping' => false])
+            ->fillForm(['local_shipping_cost' => 95])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $this->coppers->refresh();
 
-        $this->assertSame('80.00', $this->coppers->local_shipping_cost);
-        $this->assertNull($this->coppers->national_shipping_cost);
-        // La otra tienda no se toca.
+        $this->assertSame('95.00', $this->coppers->local_shipping_cost);
+        // La columna y su valor se conservan, aunque ya no se ofrezca.
+        $this->assertSame('250.00', $this->coppers->national_shipping_cost);
         $this->assertNull($this->g5->fresh()->local_shipping_cost);
     }
 
-    public function test_the_shipping_cost_must_be_a_number_from_zero_with_two_decimals()
+    public function test_the_local_cost_must_be_a_number_from_zero_with_two_decimals_and_the_map_a_link()
     {
         $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->g5);
 
-        foreach ([-5, 'gratis', 10.999, null] as $bad) {
+        foreach ([-5, 'gratis', 10.999] as $bad) {
             Livewire::test(EditStoreProfile::class)
-                ->fillForm(['offers_local_delivery' => true, 'local_shipping_cost' => $bad])
+                ->fillForm(['local_shipping_cost' => $bad])
                 ->call('save')
                 ->assertHasFormErrors(['local_shipping_cost']);
         }
 
+        Livewire::test(EditStoreProfile::class)
+            ->fillForm(['pickup_map_url' => 'por la farmacia'])
+            ->call('save')
+            ->assertHasFormErrors(['pickup_map_url']);
+
         $this->assertNull($this->g5->fresh()->local_shipping_cost);
+        $this->assertNull($this->g5->fresh()->pickup_map_url);
     }
 
     public function test_only_the_owner_edits_the_shipping_settings()

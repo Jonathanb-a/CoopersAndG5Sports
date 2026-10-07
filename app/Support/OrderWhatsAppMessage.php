@@ -14,7 +14,10 @@ use Illuminate\Support\Number;
  */
 class OrderWhatsAppMessage
 {
-    /** Mensaje para mandar el comprobante de pago: tienda, pedido, cliente, total, entrega y piezas sobre pedido. */
+    /**
+     * Mensaje para mandar el comprobante de pago: tienda, pedido, cliente, total, entrega (con el
+     * punto y la preferencia si es entrega local) y piezas sobre pedido.
+     */
     public static function receipt(Order $order): string
     {
         $lines = [
@@ -25,6 +28,18 @@ class OrderWhatsAppMessage
             'Total: '.Number::currency((float) $order->total),
             'Entrega: '.$order->delivery_method->getLabel(),
         ];
+
+        // Entrega local: el punto que propuso y cuándo prefiere, para arrancar la conversación con eso.
+        if ($order->delivery_method === DeliveryMethod::Local) {
+            $address = $order->shipping_address ?? [];
+
+            $lines = [...$lines, ...array_filter([
+                filled($address['street'] ?? null) ? "Punto de entrega: {$address['street']}" : null,
+                filled($address['notes'] ?? null) ? "Referencias: {$address['notes']}" : null,
+                filled($address['name'] ?? null) && $address['name'] !== $order->customer?->name ? "Recibe: {$address['name']}" : null,
+                ($preference = $order->deliveryPreference()) ? "Preferencia de entrega: {$preference}" : null,
+            ])];
+        }
 
         $backorder = $order->items->filter(fn (OrderItem $item) => $item->is_backorder);
 

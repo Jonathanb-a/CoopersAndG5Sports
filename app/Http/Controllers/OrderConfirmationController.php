@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeliveryMethod;
 use App\Http\Middleware\ResolveStore;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -42,6 +43,7 @@ class OrderConfirmationController extends Controller
                 'delivery_label' => $order->delivery_method->getLabel(),
                 'shipping_address' => $order->shipping_address,
                 'notes' => $order->notes,
+                'delivery_preference' => $order->deliveryPreference(),
                 'coupon' => $order->coupon?->code,
                 'subtotal' => $order->subtotal,
                 'discount' => $order->discount,
@@ -60,6 +62,8 @@ class OrderConfirmationController extends Controller
                     'is_backorder' => $item->is_backorder,
                 ])->all(),
             ],
+            // Dónde y cuándo recoger, solo si el pedido se recoge en tienda.
+            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? $store->pickupInfo() : null,
             'bankInfo' => trim((string) $store->bank_info) ?: null,
             // WhatsApp de la tienda del pedido, con el mensaje ya escrito. Null si la tienda no tiene número.
             'whatsapp' => [

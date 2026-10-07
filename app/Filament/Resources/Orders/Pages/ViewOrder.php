@@ -148,9 +148,11 @@ class ViewOrder extends ViewRecord
             ->modalHeading(fn (Order $record) => $scheduled($record) ? 'Reprogramar entrega a domicilio' : 'Programar entrega a domicilio')
             ->modalDescription('Captura la fecha y el horario que acordaste con el cliente por WhatsApp.')
             ->modalSubmitActionLabel('Guardar entrega')
+            // Sin fecha confirmada todavía, arranca con lo que pidió el cliente (si su día no pasó ya).
             ->fillForm(fn (Order $record) => [
-                'date' => $record->delivery_scheduled_date?->toDateString(),
-                'window' => $record->delivery_window,
+                'date' => $record->delivery_scheduled_date?->toDateString()
+                    ?? ($record->delivery_preferred_date?->gte(today()) ? $record->delivery_preferred_date->toDateString() : null),
+                'window' => $record->delivery_window ?? $record->delivery_preferred_window,
             ])
             ->schema([
                 DatePicker::make('date')
@@ -513,13 +515,13 @@ class ViewOrder extends ViewRecord
             ->schema([
                 TextInput::make('name')->label('Recibe')->maxLength(255),
                 TextInput::make('phone')->label('Teléfono')->tel()->maxLength(20),
-                TextInput::make('street')->label('Calle y número')->required()->maxLength(255),
-                TextInput::make('neighborhood')->label('Colonia')->required()->maxLength(255),
-                TextInput::make('city')->label('Ciudad')->required()->maxLength(255),
-                TextInput::make('state')->label('Estado')->required()->maxLength(255),
+                // En la entrega local el cliente solo da un punto de entrega: lo demás es opcional.
+                TextInput::make('street')->label('Punto de entrega o dirección')->required()->maxLength(500),
+                TextInput::make('neighborhood')->label('Colonia')->maxLength(255),
+                TextInput::make('city')->label('Ciudad')->maxLength(255),
+                TextInput::make('state')->label('Estado')->maxLength(255),
                 TextInput::make('zip')
                     ->label('Código postal')
-                    ->required()
                     ->regex('/^\d{5}$/')
                     ->validationMessages(['regex' => 'El código postal debe tener 5 dígitos.']),
                 Textarea::make('notes')->label('Referencias')->rows(2)->maxLength(1000),

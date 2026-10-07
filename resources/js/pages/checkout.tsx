@@ -1,40 +1,46 @@
 import { StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
+import { PickupInfo, type PickupInfoData } from '@/components/store/delivery-info';
 import { Field, TextAreaField } from '@/components/store/form';
 import { Reveal } from '@/components/store/reveal';
-import { Tag } from '@/components/store/tag';
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import StoreLayout from '@/Themes';
-import { type CartLine, type CustomerAddress, type SharedData } from '@/types';
+import { type CartLine, type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent, type ReactNode } from 'react';
 
 interface DeliveryOption {
+    /** "recoger" o "local": el checkout solo ofrece esas dos. */
     value: string;
     label: string;
     description: string;
-    /** Null cuando la tienda todavía no ofrece el método. */
-    cost: string | null;
-    needs_address: boolean;
-    note: string | null;
-    /** False = «Próximamente»: se muestra deshabilitado y el servidor lo rechaza. */
-    available: boolean;
+    /** "0.00" = gratis. El servidor lo vuelve a leer de la tienda al apartar. */
+    cost: string;
 }
 
 interface CheckoutProps {
     cart: { lines: CartLine[]; count: number; subtotal: string; discount: string; coupon: string | null };
     deliveryOptions: DeliveryOption[];
-    addresses: CustomerAddress[];
+    /** Dónde y cuándo se recoge en esta tienda. */
+    pickup: PickupInfoData;
+    customerName: string;
     phone: string | null;
     reserveHours: number;
     /** Aviso cuando el cliente ya tiene el máximo de apartados sin pagar; con él no se puede apartar. */
     reservationLimit: string | null;
 }
 
-const emptyAddress = { street: '', neighborhood: '', city: '', state: '', zip: '', notes: '' };
+const emptyLocal = { name: '', point: '', references: '', preferred_date: '', preferred_window: '' };
 
-type AddressKey = keyof typeof emptyAddress;
+type LocalKey = keyof typeof emptyLocal;
+
+/** Hoy en la zona del navegador, como AAAA-MM-DD, para no dejar elegir un día que ya pasó. */
+function today(): string {
+    const now = new Date();
+
+    return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+}
 
 export default function Checkout(props: CheckoutProps) {
     const { store } = usePage<SharedData>().props;
@@ -63,28 +69,26 @@ function Step({ number, title, children }: { number: number; title: string; chil
     );
 }
 
-/** Checkout: resumen, entrega, contacto y total. Los importes se muestran aquí, pero el servidor los vuelve a calcular. */
-function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours, reservationLimit }: CheckoutProps) {
+/** Checkout: resumen, entrega (recoger en tienda o entrega local), contacto y total. Los importes se muestran aquí, pero el servidor los vuelve a calcular. */
+function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, reserveHours, reservationLimit }: CheckoutProps) {
     const form = useForm<{
         delivery_method: string;
-        address_id: number | null;
-        address: typeof emptyAddress;
+        local: typeof emptyLocal;
         phone: string;
         notes: string;
     }>({
         delivery_method: 'recoger',
-        address_id: addresses[0]?.id ?? null,
-        address: emptyAddress,
+        local: { ...emptyLocal, name: customerName },
         phone: phone ?? '',
         notes: '',
     });
 
-    // Los errores de la dirección llegan como "address.street", "address.zip"...
+    // Los errores de la entrega local llegan como "local.point", "local.name"...
     const errors = form.errors as Record<string, string | undefined>;
 
-    const delivery = deliveryOptions.find((option) => option.available && option.value === form.data.delivery_method) ?? null;
-    const needsAddress = delivery?.needs_address ?? false;
-    const newAddress = form.data.address_id === null;
+    const delivery = deliveryOptions.find((option) => option.value === form.data.delivery_method) ?? null;
+    const isPickup = form.data.delivery_method === 'recoger';
+    const isLocal = form.data.delivery_method === 'local';
 
     const subtotal = Number(cart.subtotal);
     const discount = Number(cart.discount);
@@ -96,11 +100,11 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
         form.post('/checkout', { preserveScroll: true });
     };
 
-    const addressField = (name: AddressKey) => ({
-        name: `address[${name}]`,
-        value: form.data.address[name],
-        onChange: (event: { target: { value: string } }) => form.setData('address', { ...form.data.address, [name]: event.target.value }),
-        error: errors[`address.${name}`],
+    const localField = (name: LocalKey) => ({
+        name: `local[${name}]`,
+        value: form.data.local[name],
+        onChange: (event: { target: { value: string } }) => form.setData('local', { ...form.data.local, [name]: event.target.value }),
+        error: errors[`local.${name}`],
     });
 
     const choice = (selected: boolean) =>
@@ -183,51 +187,26 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
                     <Step number={2} title="Entrega">
                         <fieldset>
                             <legend className="sr-only">Método de entrega</legend>
-                            <div className="space-y-3">
-                                {deliveryOptions.map((option) =>
-                                    option.available ? (
-                                        <label key={option.value} className={choice(form.data.delivery_method === option.value)}>
-                                            <input
-                                                type="radio"
-                                                name="delivery_method"
-                                                value={option.value}
-                                                checked={form.data.delivery_method === option.value}
-                                                onChange={() => form.setData('delivery_method', option.value)}
-                                                className="accent-store-action mt-1 size-5 shrink-0"
-                                            />
-                                            <span className="min-w-0 flex-1">
-                                                <span className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
-                                                    {option.label}
-                                                    <span>{Number(option.cost) === 0 ? 'Gratis' : formatMoney(option.cost ?? 0)}</span>
-                                                </span>
-                                                <span className="text-store-muted block text-sm">{option.description}</span>
-                                                {option.note && <span className="mt-1 block text-sm font-medium">{option.note}.</span>}
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {deliveryOptions.map((option) => (
+                                    <label key={option.value} className={choice(form.data.delivery_method === option.value)}>
+                                        <input
+                                            type="radio"
+                                            name="delivery_method"
+                                            value={option.value}
+                                            checked={form.data.delivery_method === option.value}
+                                            onChange={() => form.setData('delivery_method', option.value)}
+                                            className="accent-store-action mt-1 size-5 shrink-0"
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block font-semibold">{option.label}</span>
+                                            <span className="text-store-muted block text-sm">{option.description}</span>
+                                            <span className="mt-1 block text-sm font-bold">
+                                                {Number(option.cost) === 0 ? 'Gratis' : formatMoney(option.cost)}
                                             </span>
-                                        </label>
-                                    ) : (
-                                        <label
-                                            key={option.value}
-                                            className="rounded-store border-store-border flex cursor-not-allowed items-start gap-3 border-[length:var(--store-border-width)] border-dashed p-4"
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="delivery_method"
-                                                value={option.value}
-                                                disabled
-                                                checked={false}
-                                                readOnly
-                                                className="mt-1 size-5 shrink-0 opacity-40"
-                                            />
-                                            <span className="min-w-0 flex-1">
-                                                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-semibold">
-                                                    <span className="text-store-muted">{option.label}</span>
-                                                    <Tag kind="backorder">Próximamente</Tag>
-                                                </span>
-                                                <span className="text-store-muted block text-sm">{option.description}</span>
-                                            </span>
-                                        </label>
-                                    ),
-                                )}
+                                        </span>
+                                    </label>
+                                ))}
                             </div>
                             {errors.delivery_method && (
                                 <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
@@ -236,68 +215,45 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
                             )}
                         </fieldset>
 
-                        {needsAddress && (
-                            <fieldset className="border-store-border mt-6 border-t pt-5">
-                                <legend className="font-store-body text-base font-semibold">Dirección de entrega</legend>
-                                <div className="mt-3 space-y-3">
-                                    {addresses.map((address) => (
-                                        <label key={address.id} className={choice(form.data.address_id === address.id)}>
-                                            <input
-                                                type="radio"
-                                                name="address_id"
-                                                value={address.id}
-                                                checked={form.data.address_id === address.id}
-                                                onChange={() => form.setData('address_id', address.id)}
-                                                className="accent-store-action mt-1 size-5 shrink-0"
-                                            />
-                                            <span className="text-sm leading-relaxed">
-                                                {address.street}, {address.neighborhood}, C.P. {address.zip}
-                                                <br />
-                                                {address.city}, {address.state}
-                                                {address.notes && <span className="text-store-muted block">Referencias: {address.notes}</span>}
-                                            </span>
-                                        </label>
-                                    ))}
-                                    {addresses.length > 0 && (
-                                        <label className={choice(newAddress)}>
-                                            <input
-                                                type="radio"
-                                                name="address_id"
-                                                value=""
-                                                checked={newAddress}
-                                                onChange={() => form.setData('address_id', null)}
-                                                className="accent-store-action mt-1 size-5 shrink-0"
-                                            />
-                                            <span className="font-semibold">Usar una dirección nueva</span>
-                                        </label>
-                                    )}
-                                </div>
-                                {(errors.address_id || errors.address) && (
-                                    <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
-                                        {errors.address_id ?? errors.address}
-                                    </p>
-                                )}
+                        {isPickup && (
+                            <div className="border-store-border mt-6 border-t pt-5" aria-live="polite">
+                                <h3 className="font-store-body text-base font-semibold">Dónde recoges tu pedido</h3>
+                                <PickupInfo pickup={pickup} className="mt-3" />
+                            </div>
+                        )}
 
-                                {newAddress && (
-                                    <div className="mt-4 space-y-4">
-                                        <Field label="Calle y número" autoComplete="address-line1" required {...addressField('street')} />
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <Field label="Colonia" autoComplete="address-line2" required {...addressField('neighborhood')} />
-                                            <Field
-                                                label="Código postal"
-                                                autoComplete="postal-code"
-                                                inputMode="numeric"
-                                                maxLength={5}
-                                                required
-                                                {...addressField('zip')}
-                                            />
-                                            <Field label="Ciudad" autoComplete="address-level2" required {...addressField('city')} />
-                                            <Field label="Estado" autoComplete="address-level1" required {...addressField('state')} />
-                                        </div>
-                                        <Field label="Referencias" hint="Color de la casa, entre qué calles… (opcional)" {...addressField('notes')} />
-                                        <p className="text-store-muted text-sm">Guardamos esta dirección en tu cuenta para la próxima vez.</p>
+                        {isLocal && (
+                            <fieldset className="border-store-border mt-6 border-t pt-5">
+                                <legend className="font-store-body text-base font-semibold">Entrega en Zihuatanejo</legend>
+                                <div className="mt-3 space-y-4">
+                                    <Field label="Nombre de quien recibe" autoComplete="name" required {...localField('name')} />
+                                    <Field
+                                        label="Punto de entrega o dirección en Zihuatanejo"
+                                        autoComplete="street-address"
+                                        required
+                                        hint="Tu casa, tu trabajo o un punto conocido."
+                                        {...localField('point')}
+                                    />
+                                    <Field label="Referencias" hint="Color de la casa, entre qué calles… (opcional)" {...localField('references')} />
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <Field label="Día preferido" type="date" min={today()} hint="Opcional." {...localField('preferred_date')} />
+                                        <Field
+                                            label="Rango de hora preferido"
+                                            placeholder="Entre 4 y 6 pm"
+                                            hint="Opcional."
+                                            {...localField('preferred_window')}
+                                        />
                                     </div>
-                                )}
+                                    {errors.local && (
+                                        <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
+                                            {errors.local}
+                                        </p>
+                                    )}
+                                    <p className="border-store-border bg-store-bg rounded-store border-[length:var(--store-border-width)] px-4 py-3 text-sm leading-relaxed font-medium">
+                                        Después de apartar, nos pondremos de acuerdo contigo por WhatsApp para confirmar el punto y la hora de
+                                        entrega.
+                                    </p>
+                                </div>
                             </fieldset>
                         )}
                     </Step>

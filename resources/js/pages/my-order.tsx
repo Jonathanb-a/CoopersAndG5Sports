@@ -1,5 +1,6 @@
 import { buttonVariants, StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
+import { DeliveryAddress, PickupInfo, type PickupInfoData } from '@/components/store/delivery-info';
 import { FormStatus, TextAreaField } from '@/components/store/form';
 import { ExpiringBadge, OrderStatusBadge, type OrderStatusValue } from '@/components/store/order-status-badge';
 import { Reveal } from '@/components/store/reveal';
@@ -33,6 +34,8 @@ interface MyOrderProps {
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
+        /** Día y hora que pidió el cliente para su entrega local. */
+        delivery_preference: string | null;
         coupon: string | null;
         subtotal: string;
         discount: string;
@@ -48,6 +51,8 @@ interface MyOrderProps {
     can: { cancel: boolean; request_cancellation: boolean };
     /** Entrega a domicilio (pedidos locales): fecha acordada o aviso de intento fallido. */
     delivery: { scheduled: { date: string; window: string | null } | null; failed: boolean; reschedule_url: string | null };
+    /** Dónde y cuándo recoger; null si el pedido no se recoge en tienda. */
+    pickup: PickupInfoData | null;
     cancellationRequested: boolean;
     bankInfo: string | null;
     whatsapp: { receipt_url: string | null; question_url: string | null };
@@ -91,7 +96,7 @@ function WhatsAppButton({ href, children, primary = false }: { href: string; chi
 }
 
 /** Detalle de un pedido del cliente: estado, pago (si está apartado), líneas, entrega, historial y cancelación. */
-function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo, whatsapp, status }: MyOrderProps) {
+function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, bankInfo, whatsapp, status }: MyOrderProps) {
     const { errors } = usePage<SharedData & { errors: Record<string, string> }>().props;
     const address = order.shipping_address;
     const reserved = order.status === 'apartado';
@@ -257,16 +262,8 @@ function MyOrderContent({ order, can, delivery, cancellationRequested, bankInfo,
 
                 <Section id="entrega" title="Entrega">
                     <p className="font-semibold">{order.delivery_label}</p>
-                    {address?.street && (
-                        <address className="text-store-text mt-2 text-sm leading-relaxed not-italic">
-                            {address.name}
-                            <br />
-                            {address.street}, {address.neighborhood}, C.P. {address.zip}
-                            <br />
-                            {address.city}, {address.state}
-                            {address.notes && <span className="text-store-muted block">Referencias: {address.notes}</span>}
-                        </address>
-                    )}
+                    {pickup && <PickupInfo pickup={pickup} className="mt-3" />}
+                    {!pickup && address?.street && <DeliveryAddress address={address} preference={order.delivery_preference} />}
                     {order.notes && (
                         <p className="text-store-muted mt-3 text-sm">
                             <span className="text-store-text font-semibold">Tus notas:</span> {order.notes}

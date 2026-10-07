@@ -82,14 +82,15 @@ class OrderInfolist
                     ]),
                 Section::make('Dirección de entrega')
                     ->columns(3)
-                    ->visible(fn (Order $record) => filled($record->shipping_address['street'] ?? null))
+                    // La entrega local muestra su punto de entrega en «Entrega a domicilio».
+                    ->visible(fn (Order $record) => filled($record->shipping_address['street'] ?? null) && $record->delivery_method !== DeliveryMethod::Local)
                     ->schema([
                         TextEntry::make('shipping_address.name')->label('Recibe')->placeholder('—'),
                         TextEntry::make('shipping_address.street')->label('Calle y número'),
-                        TextEntry::make('shipping_address.neighborhood')->label('Colonia'),
-                        TextEntry::make('shipping_address.city')->label('Ciudad'),
-                        TextEntry::make('shipping_address.state')->label('Estado'),
-                        TextEntry::make('shipping_address.zip')->label('Código postal'),
+                        TextEntry::make('shipping_address.neighborhood')->label('Colonia')->placeholder('—'),
+                        TextEntry::make('shipping_address.city')->label('Ciudad')->placeholder('—'),
+                        TextEntry::make('shipping_address.state')->label('Estado')->placeholder('—'),
+                        TextEntry::make('shipping_address.zip')->label('Código postal')->placeholder('—'),
                         TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—')->columnSpanFull(),
                     ]),
                 Section::make('Entrega a domicilio')
@@ -98,6 +99,21 @@ class OrderInfolist
                     // También después de cambiar a recoger: los intentos que hubo se siguen viendo.
                     ->visible(fn (Order $record) => $record->delivery_method === DeliveryMethod::Local || $record->deliveryAttempts->isNotEmpty())
                     ->schema([
+                        // Lo que propuso el cliente en el checkout, bien a la vista.
+                        TextEntry::make('shipping_address.street')
+                            ->label('Punto de entrega propuesto')
+                            ->size('lg')
+                            ->weight('bold')
+                            ->placeholder('—')
+                            ->copyable(),
+                        TextEntry::make('delivery_preference')
+                            ->label('Preferencia del cliente')
+                            ->size('lg')
+                            ->weight('bold')
+                            ->state(fn (Order $record) => $record->deliveryPreference())
+                            ->placeholder('Sin preferencia de día ni hora'),
+                        TextEntry::make('shipping_address.name')->label('Recibe')->placeholder('—'),
+                        TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—'),
                         TextEntry::make('delivery_scheduled_date')
                             ->label('Entrega programada')
                             ->date('d/m/Y')

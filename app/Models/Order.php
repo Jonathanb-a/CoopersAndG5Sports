@@ -46,6 +46,8 @@ class Order extends Model
         'delivered_at',
         'delivery_scheduled_date',
         'delivery_window',
+        'delivery_preferred_date',
+        'delivery_preferred_window',
         'tracking_carrier',
         'tracking_number',
         'cancelled_at',
@@ -97,6 +99,7 @@ class Order extends Model
             'payment_method' => PaymentMethod::class,
             'delivered_at' => 'datetime',
             'delivery_scheduled_date' => 'date',
+            'delivery_preferred_date' => 'date',
             'cancelled_at' => 'datetime',
             'cancelled_by' => CancelledBy::class,
             'refunded_at' => 'datetime',
@@ -141,6 +144,20 @@ class Order extends Model
     public function contactPhone(): ?string
     {
         return ($this->shipping_address['phone'] ?? null) ?: $this->customer?->phone;
+    }
+
+    /**
+     * Lo que el cliente pidió para su entrega local: "jueves 8 de octubre de 2026 · Entre 4 y 6 pm".
+     * Es solo su preferencia; la fecha confirmada es delivery_scheduled_date. Null si no dijo nada.
+     */
+    public function deliveryPreference(): ?string
+    {
+        $parts = array_filter([
+            $this->delivery_preferred_date?->translatedFormat('l j \d\e F \d\e Y'),
+            filled($this->delivery_preferred_window) ? $this->delivery_preferred_window : null,
+        ]);
+
+        return $parts === [] ? null : implode(' · ', $parts);
     }
 
     /** Intentos fallidos de entrega a domicilio. */

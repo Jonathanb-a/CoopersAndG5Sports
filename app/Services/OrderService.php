@@ -30,24 +30,18 @@ class OrderService
     ) {}
 
     /**
-     * Métodos de entrega que ofrece la tienda con su costo en centavos. Recoger en tienda siempre
-     * está y es gratis; local y nacional solo si la tienda les puso costo (vacío = no se ofrece).
+     * Métodos de entrega de un pedido nuevo con su costo en centavos. Siempre son dos: recoger en
+     * tienda (gratis) y entrega local en Zihuatanejo, con el costo que le puso la tienda (vacío o 0 =
+     * gratis). El envío nacional no se ofrece ni se acepta por ahora, aunque la tienda tenga un costo.
      *
      * @return array<string, int> método => costo en centavos
      */
     public function deliveryOptions(Store $store): array
     {
-        $options = [DeliveryMethod::Pickup->value => 0];
-
-        if ($store->local_shipping_cost !== null) {
-            $options[DeliveryMethod::Local->value] = $this->toCents($store->local_shipping_cost);
-        }
-
-        if ($store->national_shipping_cost !== null) {
-            $options[DeliveryMethod::National->value] = $this->toCents($store->national_shipping_cost);
-        }
-
-        return $options;
+        return [
+            DeliveryMethod::Pickup->value => 0,
+            DeliveryMethod::Local->value => $this->toCents($store->local_shipping_cost ?? 0),
+        ];
     }
 
     /**
@@ -59,6 +53,7 @@ class OrderService
      * CartChangedException con los avisos; el carrito de la sesión queda ya corregido.
      *
      * @param  array<string, mixed>|null  $shippingAddress  dirección de entrega (null al recoger en tienda)
+     * @param  array{date?: ?string, window?: ?string}  $deliveryPreference  día y horario que prefiere el cliente (solo entrega local)
      *
      * @throws CartChangedException
      * @throws ReservationLimitException si el cliente ya tiene el máximo de apartados sin pagar en la tienda
@@ -70,12 +65,13 @@ class OrderService
         ?array $shippingAddress,
         string $phone,
         ?string $notes = null,
+        array $deliveryPreference = [],
     ): Order {
         $shipping = $this->deliveryOptions($store)[$method->value]
             ?? throw new InvalidArgumentException("La tienda no ofrece el método de entrega [{$method->value}].");
 
         try {
-            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping) {
+            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping, $deliveryPreference) {
                 // Bloqueos primero y siempre en el mismo orden (tienda, tallas, cupón): dos pedidos de la
                 // misma tienda entran uno tras otro, así el número es consecutivo y nadie se lleva la
                 // misma pieza. Todo lo que se lee después ya ve los datos definitivos.
@@ -129,6 +125,11 @@ class OrderService
                     'coupon_id' => $applied?->coupon->id,
                     'expires_at' => now()->addHours((int) config('shop.reserve_hours', 48)),
                     'notes' => filled($notes) ? trim($notes) : null,
+                    // Lo que pidió el cliente; la fecha confirmada la pone después el admin.
+                    'delivery_preferred_date' => $method === DeliveryMethod::Local ? ($deliveryPreference['date'] ?? null) ?: null : null,
+                    'delivery_preferred_window' => $method === DeliveryMethod::Local && filled($deliveryPreference['window'] ?? null)
+                        ? trim($deliveryPreference['window'])
+                        : null,
                 ]);
 
                 // Primer renglón del historial: sin estado anterior → apartado, hecho por el cliente.

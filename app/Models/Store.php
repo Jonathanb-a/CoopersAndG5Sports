@@ -19,6 +19,10 @@ class Store extends Model
         'bank_info',
         'local_shipping_cost',
         'national_shipping_cost',
+        'pickup_address',
+        'pickup_hours',
+        'pickup_map_url',
+        'pickup_notes',
         'about_text',
         'is_active',
     ];
@@ -36,6 +40,25 @@ class Store extends Model
     public function whatsappUrl(?string $message = null): ?string
     {
         return WhatsAppLink::url($this->whatsapp_phone, $message);
+    }
+
+    /**
+     * Datos para «Recoger en tienda» como los ve el cliente. `configured` es false mientras el dueño
+     * no capture ni la dirección ni el horario: entonces se le dice que se confirman por WhatsApp.
+     *
+     * @return array{configured: bool, address: ?string, hours: ?string, map_url: ?string, notes: ?string}
+     */
+    public function pickupInfo(): array
+    {
+        $clean = fn (?string $value) => filled($value) ? trim($value) : null;
+
+        return [
+            'configured' => filled($this->pickup_address) || filled($this->pickup_hours),
+            'address' => $clean($this->pickup_address),
+            'hours' => $clean($this->pickup_hours),
+            'map_url' => $clean($this->pickup_map_url),
+            'notes' => $clean($this->pickup_notes),
+        ];
     }
 
     public function users(): BelongsToMany

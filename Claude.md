@@ -120,9 +120,8 @@ Sensación: cancha y calle, energía, grafiti.
 - order_items guarda nombre, talla y precio del momento de la compra.
 - Número de pedido legible por tienda (CP-00042, G5-00042), único. Prefijos
   en config/shop.php.
-- Métodos de entrega: recoger en tienda (gratis), local en Zihuatanejo y
-  nacional. El costo de local y nacional es por tienda; si está vacío, ese
-  método no se ofrece.
+- Métodos de entrega: ver "Checkout: recoger y entrega local (fase 5.17c)",
+  que sustituye la regla anterior de "si el costo está vacío no se ofrece".
 
 
 ## Decisiones de pedidos (fase 5)
@@ -161,3 +160,23 @@ Sensación: cancha y calle, energía, grafiti.
 - Método de pago: efectivo, transferencia o tarjeta (orders.payment_method).
 - Excepción a "entregado es final": el owner puede anular una venta de
   mostrador (error de captura), que regresa el stock. Solo canal mostrador.
+
+## Checkout: recoger y entrega local (fase 5.17c)
+- El checkout ofrece SOLO dos métodos, siempre visibles: "Recoger en tienda"
+  y "Entrega local (Zihuatanejo)". No dependen de que haya un costo capturado.
+- El envío nacional no se ofrece ni se acepta en pedidos nuevos (sin
+  "Próximamente"): el servidor lo rechaza con error de validación. Se
+  conservan stores.national_shipping_cost, DeliveryMethod::National y los
+  pedidos históricos.
+- Recoger en tienda: la tienda captura (solo owner) pickup_address,
+  pickup_hours, pickup_map_url y pickup_notes. Se muestran en el checkout, en
+  la página de gracias y en el detalle del pedido del cliente; sin capturar se
+  dice "Te confirmamos dirección y horario por WhatsApp".
+- Entrega local: stores.local_shipping_cost es opcional; null o 0 = "Gratis"
+  (a convenir) y con costo se suma al total. El costo siempre sale de la base.
+- El cliente da quién recibe, el punto de entrega (obligatorio), referencias
+  y, si quiere, día y rango de hora preferidos. El punto va en
+  shipping_address (street) y la preferencia en orders.delivery_preferred_date
+  y delivery_preferred_window. Es solo su preferencia: la fecha confirmada
+  sigue en delivery_scheduled_date y delivery_window, que pone el admin.
+- La entrega local no usa la libreta de direcciones del cliente.

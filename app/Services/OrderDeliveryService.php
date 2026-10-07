@@ -35,24 +35,44 @@ class OrderDeliveryService
      */
     public function schedule(Order $order, CarbonInterface|string $date, ?string $window, User $actor): Order
     {
+        return $this->applySchedule($order, $date, $window, $actor, pickup: false);
+    }
+
+    /**
+     * Programa o reprograma la recogida en tienda de un pedido apartado o pagado y lo anota en el
+     * historial. Usa las mismas columnas que la entrega a domicilio (fecha y horario).
+     *
+     * @param  string|null  $window  hora o rango en texto libre, opcional
+     *
+     * @throws InvalidOrderTransitionException
+     */
+    public function schedulePickup(Order $order, CarbonInterface|string $date, ?string $window, User $actor): Order
+    {
+        return $this->applySchedule($order, $date, $window, $actor, pickup: true);
+    }
+
+    private function applySchedule(Order $order, CarbonInterface|string $date, ?string $window, User $actor, bool $pickup): Order
+    {
         $date = Carbon::parse($date)->startOfDay();
         $window = filled($window) ? trim($window) : null;
 
         if ($date->lt(today())) {
-            throw new InvalidOrderTransitionException('La fecha de entrega no puede ser anterior a hoy.');
+            throw new InvalidOrderTransitionException($pickup
+                ? 'La fecha de recogida no puede ser anterior a hoy.'
+                : 'La fecha de entrega no puede ser anterior a hoy.');
         }
 
-        return $this->locked($order, $actor, function (Order $locked) use ($date, $window, $actor) {
-            if (! self::canSchedule($locked)) {
-                throw new InvalidOrderTransitionException(
-                    "El pedido {$locked->number} no se puede programar: solo los pedidos de entrega local pagados o enviados."
-                );
+        return $this->locked($order, $actor, function (Order $locked) use ($date, $window, $actor, $pickup) {
+            if (! ($pickup ? self::canSchedulePickup($locked) : self::canSchedule($locked))) {
+                throw new InvalidOrderTransitionException($pickup
+                    ? "El pedido {$locked->number} no se puede programar: solo los pedidos para recoger en tienda apartados o pagados."
+                    : "El pedido {$locked->number} no se puede programar: solo los pedidos de entrega local pagados o enviados.");
             }
 
             $locked->update(['delivery_scheduled_date' => $date, 'delivery_window' => $window]);
 
-            // Pedido en efectivo: no vence mientras su fecha de entrega esté vigente. Pasa al final de ese
-            // día, sin pasar del tope de shop.cash_reserve_max_days desde que se creó.
+            // Pedido en efectivo: no vence mientras su fecha esté vigente. Pasa al final de ese día, sin
+            // pasar del tope de shop.cash_reserve_max_days desde que se creó. En transferencia no cambia.
             if ($locked->paysInCash()) {
                 $locked->update(['expires_at' => $locked->cashDeadlineFor($date), 'cash_overdue_notified_at' => null]);
             }
@@ -60,7 +80,7 @@ class OrderDeliveryService
             $this->statuses->annotate(
                 $locked,
                 $actor,
-                'Entrega programada para '.$date->format('d/m/Y').($window ? " ({$window})" : '').'.',
+                ($pickup ? 'Recogida programada para ' : 'Entrega programada para ').$date->format('d/m/Y').($window ? " ({$window})" : '').'.',
             );
         });
     }
@@ -148,6 +168,13 @@ class OrderDeliveryService
     {
         return $order->delivery_method === DeliveryMethod::Local
             && in_array($order->status, [OrderStatus::Paid, OrderStatus::Shipped], true);
+    }
+
+    /** Recoger en tienda: se programa mientras está apartado o pagado (en efectivo, pagado es «confirmado»). */
+    public static function canSchedulePickup(Order $order): bool
+    {
+        return $order->delivery_method === DeliveryMethod::Pickup
+            && in_array($order->status, [OrderStatus::Reserved, OrderStatus::Paid], true);
     }
 
     public static function canRecordAttempt(Order $order): bool

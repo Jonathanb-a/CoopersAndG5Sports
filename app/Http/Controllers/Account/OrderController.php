@@ -118,7 +118,7 @@ class OrderController extends Controller
             ],
             'delivery' => $this->delivery($order),
             // Dónde y cuándo recoger, solo si el pedido se recoge en tienda.
-            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? $store->pickupInfo() : null,
+            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? [...$store->pickupInfo(), 'schedule' => $order->pickupSchedule()] : null,
             'cancellationRequested' => CancellationRequestService::isPending($order),
             'bankInfo' => $reserved ? (trim((string) $store->bank_info) ?: null) : null,
             'whatsapp' => [

@@ -759,10 +759,10 @@ class CheckoutTest extends TestCase
         $this->place()->assertRedirect(self::COPPERS.'/pedido/CP-00001/gracias');
         $this->place(host: self::G5)->assertRedirect(self::G5.'/pedido/G5-00001/gracias');
 
-        $this->get(self::COPPERS.'/pedido/CP-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', $coppers));
-        $this->get(self::COPPERS.'/mi-cuenta/pedidos/CP-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', $coppers));
-        $this->get(self::G5.'/pedido/G5-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', $empty));
-        $this->get(self::G5.'/mi-cuenta/pedidos/G5-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', $empty));
+        $this->get(self::COPPERS.'/pedido/CP-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', [...$coppers, 'schedule' => null]));
+        $this->get(self::COPPERS.'/mi-cuenta/pedidos/CP-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', [...$coppers, 'schedule' => null]));
+        $this->get(self::G5.'/pedido/G5-00001/gracias')->assertInertia(fn (Assert $page) => $page->where('pickup', [...$empty, 'schedule' => null]));
+        $this->get(self::G5.'/mi-cuenta/pedidos/G5-00001')->assertInertia(fn (Assert $page) => $page->where('pickup', [...$empty, 'schedule' => null]));
 
         // Un pedido de entrega local no lleva el recuadro de recoger.
         $this->addToCart($this->variant($this->product($this->coppers, 'Pantalón')));

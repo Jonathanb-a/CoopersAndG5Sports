@@ -212,3 +212,18 @@ Sensación: cancha y calle, energía, grafiti.
   aparece en "Por cobrar" con su monto.
 - "Por cobrar" = apartados vigentes + pedidos en efectivo pagados o enviados.
 - Los cancelados (y las ventas de mostrador anuladas) no cuentan en nada.
+
+## Programar recogida en tienda (fase 5)
+- Pedidos de método "recoger" en estado apartado o pagado (en efectivo, pagado
+  es "confirmado") tienen la acción "Programar recogida": fecha obligatoria
+  (hoy o futura) y hora o rango opcional. Reusa delivery_scheduled_date y
+  delivery_window; el método de entrega decide qué significan.
+- En efectivo, al programar la recogida expires_at pasa al final de ese día,
+  con el tope de shop.cash_reserve_max_days. En transferencia no cambia.
+- Queda en order_status_histories como anotación con quién la hizo.
+- El cliente ve "Recoge el [fecha] · [hora]" junto con la dirección y el
+  horario de la tienda (gracias y "Mis pedidos"), mientras el pedido siga
+  abierto. La acción ofrece un botón de WhatsApp (OrderWhatsAppMessage) con
+  número de pedido, fecha y dirección de la tienda.
+- Si pasa la fecha y el pedido en efectivo no se entregó, aplica el mismo aviso
+  "Pedido en efectivo sin entregar" (campana y Telegram); no se cancela solo.

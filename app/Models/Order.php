@@ -140,6 +140,24 @@ class Order extends Model
         return $this->payment_method === PaymentMethod::Cash;
     }
 
+    /** Cuándo se recoge un pedido que se recoge en tienda: "jueves 8 de octubre de 2026 · Entre 4 y 6 pm". Null sin fecha. */
+    public function pickupWhen(): ?string
+    {
+        if ($this->delivery_method !== DeliveryMethod::Pickup || $this->delivery_scheduled_date === null) {
+            return null;
+        }
+
+        return $this->delivery_scheduled_date->translatedFormat('l j \d\e F \d\e Y').(filled($this->delivery_window) ? " · {$this->delivery_window}" : '');
+    }
+
+    /** Lo que ve el cliente mientras su pedido sigue abierto: "Recoge el jueves 8 de octubre de 2026 · Entre 4 y 6 pm". */
+    public function pickupSchedule(): ?string
+    {
+        $open = in_array($this->status, [OrderStatus::Reserved, OrderStatus::Paid, OrderStatus::Shipped], true);
+
+        return $open && ($when = $this->pickupWhen()) !== null ? "Recoge el {$when}" : null;
+    }
+
     /** Lo más lejos que puede vencer un pedido en efectivo: shop.cash_reserve_max_days desde que se creó. */
     public function cashReserveCap(): CarbonInterface
     {

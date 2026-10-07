@@ -93,6 +93,14 @@ class OrderInfolist
                         TextEntry::make('shipping_address.zip')->label('Código postal')->placeholder('—'),
                         TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—')->columnSpanFull(),
                     ]),
+                Section::make('Recogida en tienda')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->visible(fn (Order $record) => $record->delivery_method === DeliveryMethod::Pickup && $record->delivery_scheduled_date !== null)
+                    ->schema([
+                        TextEntry::make('delivery_scheduled_date')->label('Recogida programada')->date('d/m/Y')->weight('bold'),
+                        TextEntry::make('delivery_window')->label('Hora o rango')->placeholder('—'),
+                    ]),
                 Section::make('Entrega a domicilio')
                     ->columnSpanFull()
                     ->columns(2)

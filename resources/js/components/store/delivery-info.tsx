@@ -8,6 +8,8 @@ export interface PickupInfoData {
     hours: string | null;
     map_url: string | null;
     notes: string | null;
+    /** "Recoge el jueves 8 de octubre de 2026 · Entre 4 y 6 pm", cuando la tienda ya acordó la fecha. */
+    schedule?: string | null;
 }
 
 /**
@@ -22,6 +24,7 @@ export function PickupInfo({ pickup, className }: { pickup: PickupInfoData; clas
                 className,
             )}
         >
+            {pickup.schedule && <p className="mb-3 text-base font-bold first-letter:uppercase">{pickup.schedule}</p>}
             {pickup.configured ? (
                 <dl className="space-y-3">
                     {pickup.address && (

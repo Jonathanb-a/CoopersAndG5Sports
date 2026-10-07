@@ -69,6 +69,17 @@ class OrderWhatsAppMessage
         $store = $order->store->name;
         $pickup = $order->delivery_method === DeliveryMethod::Pickup;
 
+        // Recoger en tienda con fecha acordada: se avisa el día, la hora y a dónde ir.
+        if ($pickup && ($when = $order->pickupWhen()) !== null && in_array($order->status, [OrderStatus::Reserved, OrderStatus::Paid], true)) {
+            $address = $order->store->pickupInfo()['address'];
+
+            return implode("\n", array_filter([
+                "{$hello}, tu pedido {$order->number} queda para recoger el {$when}.",
+                $address ? "Dirección: {$address}" : null,
+                $store,
+            ]));
+        }
+
         // La entrega a domicilio tiene sus propios avisos: programada, intento fallido y confirmada.
         if ($order->delivery_method === DeliveryMethod::Local) {
             $delivery = self::deliveryNotice($order, $hello, $store);

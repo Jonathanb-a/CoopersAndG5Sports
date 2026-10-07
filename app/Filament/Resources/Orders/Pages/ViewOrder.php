@@ -52,6 +52,7 @@ class ViewOrder extends ViewRecord
             $this->markShippedAction(),
             $this->markDeliveredAction(),
             $this->scheduleDeliveryAction(),
+            $this->schedulePickupAction(),
             $this->recordAttemptAction(),
             $this->switchToPickupAction(),
             $this->extendAction(),
@@ -178,6 +179,65 @@ class ViewOrder extends ViewRecord
                 }
 
                 Notification::make()->success()->title('Entrega programada para el '.$order->delivery_scheduled_date->format('d/m/Y'))->send();
+            });
+    }
+
+    /** Recoger en tienda: fija (o cambia) el día, y la hora si se acordó, en que el cliente pasa por su pedido. */
+    private function schedulePickupAction(): Action
+    {
+        $scheduled = fn (Order $record) => $record->delivery_scheduled_date !== null;
+
+        return Action::make('schedulePickup')
+            ->label(fn (Order $record) => $scheduled($record) ? 'Reprogramar recogida' : 'Programar recogida')
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->color('info')
+            ->visible(fn (Order $record) => OrderDeliveryService::canSchedulePickup($record))
+            ->modalHeading(fn (Order $record) => $scheduled($record) ? 'Reprogramar recogida en tienda' : 'Programar recogida en tienda')
+            ->modalDescription('Captura el día (y la hora o el rango, si lo acordaste) en que el cliente pasará por su pedido. Después puedes avisarle por WhatsApp.')
+            ->modalSubmitActionLabel('Guardar recogida')
+            ->fillForm(fn (Order $record) => [
+                'date' => $record->delivery_scheduled_date?->toDateString(),
+                'window' => $record->delivery_window,
+            ])
+            ->schema([
+                DatePicker::make('date')
+                    ->label('Fecha de recogida')
+                    ->required()
+                    ->minDate(today())
+                    ->rule('after_or_equal:today')
+                    ->validationMessages(['after_or_equal' => 'La fecha de recogida no puede ser anterior a hoy.']),
+                TextInput::make('window')
+                    ->label('Hora o rango (opcional)')
+                    ->placeholder('Entre 4 y 6 pm')
+                    ->maxLength(255),
+            ])
+            ->action(function (array $data, Order $record) {
+                try {
+                    $order = app(OrderDeliveryService::class)->schedulePickup($record, $data['date'], $data['window'] ?? null, auth()->user());
+                } catch (InvalidOrderTransitionException $exception) {
+                    Notification::make()->danger()->title('No se pudo programar la recogida')->body($exception->getMessage())->send();
+
+                    return;
+                }
+
+                $notification = Notification::make()
+                    ->success()
+                    ->title('Recogida programada para el '.$order->delivery_scheduled_date->format('d/m/Y'));
+
+                // Botón para avisarle al cliente la fecha acordada, con el mensaje ya escrito.
+                if ($url = OrderWhatsAppMessage::statusNoticeUrl($order->load('store', 'customer'))) {
+                    $notification
+                        ->body('Avísale al cliente por WhatsApp.')
+                        ->persistent()
+                        ->actions([
+                            Action::make('notifyCustomer')
+                                ->label('Avisar por WhatsApp')
+                                ->button()
+                                ->url($url, shouldOpenInNewTab: true),
+                        ]);
+                }
+
+                $notification->send();
             });
     }
 

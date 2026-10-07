@@ -64,7 +64,7 @@ class OrderConfirmationController extends Controller
                 ])->all(),
             ],
             // Dónde y cuándo recoger, solo si el pedido se recoge en tienda.
-            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? $store->pickupInfo() : null,
+            'pickup' => $order->delivery_method === DeliveryMethod::Pickup ? [...$store->pickupInfo(), 'schedule' => $order->pickupSchedule()] : null,
             'bankInfo' => trim((string) $store->bank_info) ?: null,
             // WhatsApp de la tienda del pedido, con el mensaje ya escrito. Null si la tienda no tiene número.
             'whatsapp' => [

@@ -28,8 +28,6 @@ interface OrderThanksProps {
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
-        /** Día y hora que pidió el cliente para su entrega local. */
-        delivery_preference: string | null;
         coupon: string | null;
         subtotal: string;
         discount: string;
@@ -175,7 +173,7 @@ function OrderThanksContent({ order, pickup, bankInfo, whatsapp }: OrderThanksPr
                     </h2>
                     <p className="mt-3 font-semibold">{order.delivery_label}</p>
                     {pickup && <PickupInfo pickup={pickup} className="mt-3" />}
-                    {address && <DeliveryAddress address={address} preference={order.delivery_preference} showPhone />}
+                    {address && <DeliveryAddress address={address} showPhone />}
                     {order.notes && (
                         <p className="text-store-muted mt-3 text-sm">
                             <span className="text-store-text font-semibold">Notas:</span> {order.notes}

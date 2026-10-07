@@ -174,9 +174,8 @@ Sensación: cancha y calle, energía, grafiti.
   dice "Te confirmamos dirección y horario por WhatsApp".
 - Entrega local: stores.local_shipping_cost es opcional; null o 0 = "Gratis"
   (a convenir) y con costo se suma al total. El costo siempre sale de la base.
-- El cliente da quién recibe, el punto de entrega (obligatorio), referencias
-  y, si quiere, día y rango de hora preferidos. El punto va en
-  shipping_address (street) y la preferencia en orders.delivery_preferred_date
-  y delivery_preferred_window. Es solo su preferencia: la fecha confirmada
-  sigue en delivery_scheduled_date y delivery_window, que pone el admin.
+- El cliente da quién recibe, el punto de entrega (obligatorio) y referencias.
+  El punto va en shipping_address (street). NO se le pide día ni hora: el dueño
+  no siempre puede cumplirlos, así que la fecha y el horario los acuerda el
+  admin por WhatsApp y los captura en delivery_scheduled_date y delivery_window.
 - La entrega local no usa la libreta de direcciones del cliente.

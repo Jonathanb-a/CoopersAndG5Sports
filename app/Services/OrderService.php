@@ -53,7 +53,6 @@ class OrderService
      * CartChangedException con los avisos; el carrito de la sesión queda ya corregido.
      *
      * @param  array<string, mixed>|null  $shippingAddress  dirección de entrega (null al recoger en tienda)
-     * @param  array{date?: ?string, window?: ?string}  $deliveryPreference  día y horario que prefiere el cliente (solo entrega local)
      *
      * @throws CartChangedException
      * @throws ReservationLimitException si el cliente ya tiene el máximo de apartados sin pagar en la tienda
@@ -65,13 +64,12 @@ class OrderService
         ?array $shippingAddress,
         string $phone,
         ?string $notes = null,
-        array $deliveryPreference = [],
     ): Order {
         $shipping = $this->deliveryOptions($store)[$method->value]
             ?? throw new InvalidArgumentException("La tienda no ofrece el método de entrega [{$method->value}].");
 
         try {
-            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping, $deliveryPreference) {
+            $order = DB::transaction(function () use ($store, $customer, $method, $shippingAddress, $phone, $notes, $shipping) {
                 // Bloqueos primero y siempre en el mismo orden (tienda, tallas, cupón): dos pedidos de la
                 // misma tienda entran uno tras otro, así el número es consecutivo y nadie se lleva la
                 // misma pieza. Todo lo que se lee después ya ve los datos definitivos.
@@ -125,11 +123,6 @@ class OrderService
                     'coupon_id' => $applied?->coupon->id,
                     'expires_at' => now()->addHours((int) config('shop.reserve_hours', 48)),
                     'notes' => filled($notes) ? trim($notes) : null,
-                    // Lo que pidió el cliente; la fecha confirmada la pone después el admin.
-                    'delivery_preferred_date' => $method === DeliveryMethod::Local ? ($deliveryPreference['date'] ?? null) ?: null : null,
-                    'delivery_preferred_window' => $method === DeliveryMethod::Local && filled($deliveryPreference['window'] ?? null)
-                        ? trim($deliveryPreference['window'])
-                        : null,
                 ]);
 
                 // Primer renglón del historial: sin estado anterior → apartado, hecho por el cliente.

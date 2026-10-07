@@ -18,8 +18,7 @@ class TelegramMessage
 {
     /**
      * Pedido nuevo de la tienda en línea. Al recoger en tienda solo dice eso; en cualquier otra
-     * entrega (a domicilio) agrega a dónde va, quién recibe y el teléfono, más lo que el cliente
-     * prefiere de día y hora.
+     * entrega (a domicilio) agrega a dónde va, quién recibe y el teléfono.
      */
     public static function newOrder(Order $order, Store $store, ?Customer $customer): string
     {
@@ -39,7 +38,6 @@ class TelegramMessage
                 filled($address['notes'] ?? null) ? "Referencias: {$address['notes']}" : null,
                 filled($address['name'] ?? null) ? "Recibe: {$address['name']}" : null,
                 ($phone = $order->contactPhone()) ? "Teléfono: {$phone}" : null,
-                ($preference = $order->deliveryPreference()) ? "Preferencia de entrega: {$preference}" : null,
             ])];
         }
 

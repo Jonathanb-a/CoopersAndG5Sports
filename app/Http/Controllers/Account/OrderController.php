@@ -86,7 +86,6 @@ class OrderController extends Controller
                 'delivery_label' => $order->delivery_method->getLabel(),
                 'shipping_address' => $order->shipping_address,
                 'notes' => $order->notes,
-                'delivery_preference' => $order->deliveryPreference(),
                 'coupon' => $order->coupon?->code,
                 'subtotal' => $order->subtotal,
                 'discount' => $order->discount,

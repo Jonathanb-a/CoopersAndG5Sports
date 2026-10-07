@@ -148,11 +148,9 @@ class ViewOrder extends ViewRecord
             ->modalHeading(fn (Order $record) => $scheduled($record) ? 'Reprogramar entrega a domicilio' : 'Programar entrega a domicilio')
             ->modalDescription('Captura la fecha y el horario que acordaste con el cliente por WhatsApp.')
             ->modalSubmitActionLabel('Guardar entrega')
-            // Sin fecha confirmada todavía, arranca con lo que pidió el cliente (si su día no pasó ya).
             ->fillForm(fn (Order $record) => [
-                'date' => $record->delivery_scheduled_date?->toDateString()
-                    ?? ($record->delivery_preferred_date?->gte(today()) ? $record->delivery_preferred_date->toDateString() : null),
-                'window' => $record->delivery_window ?? $record->delivery_preferred_window,
+                'date' => $record->delivery_scheduled_date?->toDateString(),
+                'window' => $record->delivery_window,
             ])
             ->schema([
                 DatePicker::make('date')

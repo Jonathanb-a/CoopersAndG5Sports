@@ -22,7 +22,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/** Entrega local desde el checkout: el punto y la preferencia del cliente llegan al WhatsApp y al panel. */
+/** Entrega local desde el checkout: el punto de entrega llega al WhatsApp y al panel. */
 class LocalDeliveryCheckoutTest extends TestCase
 {
     use RefreshDatabase;
@@ -102,10 +102,10 @@ class LocalDeliveryCheckoutTest extends TestCase
 
     // ---- WhatsApp ---------------------------------------------------------------------------------
 
-    public function test_the_whatsapp_message_of_a_local_order_includes_the_delivery_point_and_the_preference()
+    public function test_the_whatsapp_message_of_a_local_order_includes_the_delivery_point()
     {
         $order = $this->place($this->local([
-            'name' => 'Luisa Pérez', 'references' => 'Frente a la playa', 'preferred_date' => '2026-10-08', 'preferred_window' => 'Entre 4 y 6 pm',
+            'name' => 'Luisa Pérez', 'references' => 'Frente a la playa',
         ]));
 
         $this->assertSame(implode("\n", [
@@ -118,17 +118,15 @@ class LocalDeliveryCheckoutTest extends TestCase
             'Punto de entrega: Hotel Sol, lobby',
             'Referencias: Frente a la playa',
             'Recibe: Luisa Pérez',
-            'Preferencia de entrega: jueves 8 de octubre de 2026 · Entre 4 y 6 pm',
         ]), $this->receiptText($order));
     }
 
-    public function test_without_a_preference_the_message_still_carries_the_point_and_a_pickup_order_carries_neither()
+    public function test_a_pickup_order_message_carries_no_delivery_point()
     {
         $local = $this->place($this->local());
         $text = $this->receiptText($local);
 
         $this->assertStringContainsString("Entrega: Entrega local\nPunto de entrega: Hotel Sol, lobby", $text);
-        $this->assertStringNotContainsString('Preferencia', $text);
         $this->assertStringNotContainsString('Referencias', $text);
         $this->assertStringNotContainsString('Recibe', $text);   // recibe la misma clienta
 
@@ -137,15 +135,13 @@ class LocalDeliveryCheckoutTest extends TestCase
 
         $this->assertStringContainsString('Entrega: Recoger en tienda', $text);
         $this->assertStringNotContainsString('Punto de entrega', $text);
-        $this->assertStringNotContainsString('Preferencia', $text);
     }
 
     // ---- Panel ------------------------------------------------------------------------------------
 
-    public function test_the_panel_shows_the_proposed_point_and_the_customers_preference()
+    public function test_the_panel_shows_the_proposed_point()
     {
-        $order = $this->place($this->local(['references' => 'Frente a la playa', 'preferred_date' => '2026-10-08', 'preferred_window' => 'Entre 4 y 6 pm']));
-        $plain = $this->place($this->local(['point' => 'Calle Hidalgo 5']));
+        $order = $this->place($this->local(['references' => 'Frente a la playa']));
         $this->panel();
 
         Livewire::test(ViewOrder::class, ['record' => $order->getRouteKey()])
@@ -153,25 +149,20 @@ class LocalDeliveryCheckoutTest extends TestCase
             ->assertSee('Punto de entrega propuesto')
             ->assertSee('Hotel Sol, lobby')
             ->assertSee('Frente a la playa')
-            ->assertSee('Preferencia del cliente')
-            ->assertSee('jueves 8 de octubre de 2026 · Entre 4 y 6 pm')
+            ->assertDontSee('Preferencia')
             ->assertSee('Sin programar');
-
-        Livewire::test(ViewOrder::class, ['record' => $plain->getRouteKey()])
-            ->assertSee('Calle Hidalgo 5')
-            ->assertSee('Sin preferencia de día ni hora');
     }
 
-    public function test_the_admin_confirms_the_date_without_replacing_the_customers_preference()
+    public function test_the_admin_confirms_the_date_and_the_rest_of_the_delivery_flow_still_works()
     {
-        $order = $this->place($this->local(['preferred_date' => '2026-10-08', 'preferred_window' => 'Entre 4 y 6 pm']));
+        $order = $this->place($this->local());
         app(OrderStatusService::class)->transition($order, OrderStatus::Paid, $this->owner);
         $this->panel();
 
-        // El formulario de programar arranca con lo que pidió el cliente; el admin confirma otra cosa.
+        // El formulario de programar arranca vacío: el admin captura lo que acordó por WhatsApp.
         Livewire::test(ViewOrder::class, ['record' => $order->getRouteKey()])
             ->mountAction('scheduleDelivery')
-            ->assertActionDataSet(['date' => '2026-10-08', 'window' => 'Entre 4 y 6 pm'])
+            ->assertActionDataSet(['date' => null, 'window' => null])
             ->setActionData(['date' => '2026-10-09', 'window' => 'De 10 a 12'])
             ->callMountedAction()
             ->assertHasNoFormErrors();
@@ -179,16 +170,14 @@ class LocalDeliveryCheckoutTest extends TestCase
         $order->refresh();
 
         $this->assertSame(['2026-10-09', 'De 10 a 12'], [$order->delivery_scheduled_date->toDateString(), $order->delivery_window]);
-        $this->assertSame(['2026-10-08', 'Entre 4 y 6 pm'], [$order->delivery_preferred_date->toDateString(), $order->delivery_preferred_window]);
 
-        // Lo ya construido sigue igual: intento fallido limpia la fecha confirmada, no la preferencia.
+        // Lo ya construido sigue igual: un intento fallido limpia la fecha confirmada.
         app(OrderStatusService::class)->transition($order, OrderStatus::Shipped, $this->owner);
         app(OrderDeliveryService::class)->recordAttempt($order, DeliveryAttemptResult::NotHome, null, $this->owner);
         app(OrderDeliveryService::class)->recordAttempt($order, DeliveryAttemptResult::NotHome, null, $this->owner);
 
         $order->refresh();
         $this->assertNull($order->delivery_scheduled_date);
-        $this->assertSame('Entre 4 y 6 pm', $order->delivery_preferred_window);
         $this->assertTrue(OrderDeliveryService::canSwitchToPickup($order));
 
         app(OrderDeliveryService::class)->switchToPickup($order, $this->owner);

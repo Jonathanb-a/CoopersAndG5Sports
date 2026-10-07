@@ -103,10 +103,7 @@ class CheckoutController extends Controller
         ];
 
         try {
-            $order = $this->orders->place($store, $customer, $method, $shippingAddress, $phone, $data['notes'] ?? null, [
-                'date' => $local['preferred_date'] ?? null,
-                'window' => $local['preferred_window'] ?? null,
-            ]);
+            $order = $this->orders->place($store, $customer, $method, $shippingAddress, $phone, $data['notes'] ?? null);
         } catch (CartChangedException $exception) {
             return to_route('cart.show')->with('cart_notices', $exception->notices);
         } catch (ReservationLimitException $exception) {
@@ -117,10 +114,10 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Datos de la entrega local: quién recibe, el punto de entrega propuesto, referencias y, si
-     * quiere, el día y el rango de hora que prefiere. La fecha definitiva la confirma la tienda.
+     * Datos de la entrega local: quién recibe, el punto de entrega propuesto y referencias. El día
+     * y la hora los acuerda la tienda con el cliente por WhatsApp.
      *
-     * @return array{name: string, point: string, references: ?string, preferred_date: ?string, preferred_window: ?string}
+     * @return array{name: string, point: string, references: ?string}
      */
     private function localDelivery(Request $request): array
     {
@@ -129,19 +126,13 @@ class CheckoutController extends Controller
             'local.name' => ['required', 'string', 'max:255'],
             'local.point' => ['required', 'string', 'max:500'],
             'local.references' => ['nullable', 'string', 'max:1000'],
-            'local.preferred_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'local.preferred_window' => ['nullable', 'string', 'max:255'],
         ], [
             'local.required' => 'Dinos quién recibe y el punto de entrega.',
             'local.point.required' => 'Escribe el punto de entrega o la dirección en Zihuatanejo.',
-            'local.preferred_date.date_format' => 'Elige un día válido.',
-            'local.preferred_date.after_or_equal' => 'El día preferido no puede ser anterior a hoy.',
         ], [
             'local.name' => 'nombre de quien recibe',
             'local.point' => 'punto de entrega',
             'local.references' => 'referencias',
-            'local.preferred_date' => 'día preferido',
-            'local.preferred_window' => 'horario preferido',
         ])['local'];
 
         $text = fn (string $key) => filled($validated[$key] ?? null) ? trim($validated[$key]) : null;
@@ -150,8 +141,6 @@ class CheckoutController extends Controller
             'name' => trim($validated['name']),
             'point' => trim($validated['point']),
             'references' => $text('references'),
-            'preferred_date' => $text('preferred_date'),
-            'preferred_window' => $text('preferred_window'),
         ];
     }
 

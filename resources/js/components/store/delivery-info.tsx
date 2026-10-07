@@ -69,8 +69,6 @@ export function PickupInfo({ pickup, className }: { pickup: PickupInfoData; clas
 
 interface DeliveryAddressProps {
     address: Record<string, string | null>;
-    /** Día y hora que pidió el cliente; la fecha definitiva la confirma la tienda. */
-    preference?: string | null;
     showPhone?: boolean;
 }
 
@@ -78,7 +76,7 @@ interface DeliveryAddressProps {
  * A dónde va un pedido con entrega: quién recibe y el punto de entrega. Los pedidos de entrega local
  * solo traen el punto y la ciudad; los anteriores traen además colonia, código postal y estado.
  */
-export function DeliveryAddress({ address, preference, showPhone = false }: DeliveryAddressProps) {
+export function DeliveryAddress({ address, showPhone = false }: DeliveryAddressProps) {
     const place = [address.street, address.neighborhood, address.zip ? `C.P. ${address.zip}` : null].filter(Boolean).join(', ');
     const region = [address.city, address.state].filter(Boolean).join(', ');
 
@@ -89,12 +87,6 @@ export function DeliveryAddress({ address, preference, showPhone = false }: Deli
             {region && <span className="block">{region}</span>}
             {address.notes && <span className="text-store-muted block break-words">Referencias: {address.notes}</span>}
             {showPhone && address.phone && <span className="block">Tel. {address.phone}</span>}
-            {preference && (
-                <span className="mt-2 block">
-                    <span className="font-semibold">Tu preferencia:</span> <span className="first-letter:uppercase">{preference}</span>
-                    <span className="text-store-muted block">Confirmamos el punto y la hora contigo por WhatsApp.</span>
-                </span>
-            )}
         </address>
     );
 }

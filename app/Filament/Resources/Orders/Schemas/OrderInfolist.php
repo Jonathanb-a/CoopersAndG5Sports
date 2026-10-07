@@ -106,12 +106,6 @@ class OrderInfolist
                             ->weight('bold')
                             ->placeholder('—')
                             ->copyable(),
-                        TextEntry::make('delivery_preference')
-                            ->label('Preferencia del cliente')
-                            ->size('lg')
-                            ->weight('bold')
-                            ->state(fn (Order $record) => $record->deliveryPreference())
-                            ->placeholder('Sin preferencia de día ni hora'),
                         TextEntry::make('shipping_address.name')->label('Recibe')->placeholder('—'),
                         TextEntry::make('shipping_address.notes')->label('Referencias')->placeholder('—'),
                         TextEntry::make('delivery_scheduled_date')

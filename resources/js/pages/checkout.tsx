@@ -31,16 +31,9 @@ interface CheckoutProps {
     reservationLimit: string | null;
 }
 
-const emptyLocal = { name: '', point: '', references: '', preferred_date: '', preferred_window: '' };
+const emptyLocal = { name: '', point: '', references: '' };
 
 type LocalKey = keyof typeof emptyLocal;
-
-/** Hoy en la zona del navegador, como AAAA-MM-DD, para no dejar elegir un día que ya pasó. */
-function today(): string {
-    const now = new Date();
-
-    return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
-}
 
 export default function Checkout(props: CheckoutProps) {
     const { store } = usePage<SharedData>().props;
@@ -235,15 +228,6 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                                         {...localField('point')}
                                     />
                                     <Field label="Referencias" hint="Color de la casa, entre qué calles… (opcional)" {...localField('references')} />
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <Field label="Día preferido" type="date" min={today()} hint="Opcional." {...localField('preferred_date')} />
-                                        <Field
-                                            label="Rango de hora preferido"
-                                            placeholder="Entre 4 y 6 pm"
-                                            hint="Opcional."
-                                            {...localField('preferred_window')}
-                                        />
-                                    </div>
                                     {errors.local && (
                                         <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
                                             {errors.local}

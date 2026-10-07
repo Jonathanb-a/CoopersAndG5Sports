@@ -214,7 +214,6 @@ class TelegramNotifierTest extends TestCase
             'delivery_method' => 'local',
             'local' => [
                 'name' => 'Luisa Pérez', 'point' => 'Calle Hidalgo 5, Centro', 'references' => 'Portón negro',
-                'preferred_date' => '2026-10-08', 'preferred_window' => 'Entre 4 y 6 pm',
             ],
         ])->assertSessionHasNoErrors();
         $this->checkout($ball, host: self::G5)->assertSessionHasNoErrors();
@@ -229,7 +228,6 @@ class TelegramNotifierTest extends TestCase
                 'Referencias: Portón negro',
                 'Recibe: Luisa Pérez',
                 'Teléfono: 755 123 4567',
-                'Preferencia de entrega: jueves 8 de octubre de 2026 · Entre 4 y 6 pm',
                 'Pago: Transferencia',
                 'Paga antes de: 08/10/2026 10:30',
             ]),

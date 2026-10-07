@@ -34,8 +34,6 @@ interface MyOrderProps {
         delivery_label: string;
         shipping_address: Record<string, string | null> | null;
         notes: string | null;
-        /** Día y hora que pidió el cliente para su entrega local. */
-        delivery_preference: string | null;
         coupon: string | null;
         subtotal: string;
         discount: string;
@@ -263,7 +261,7 @@ function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, b
                 <Section id="entrega" title="Entrega">
                     <p className="font-semibold">{order.delivery_label}</p>
                     {pickup && <PickupInfo pickup={pickup} className="mt-3" />}
-                    {!pickup && address?.street && <DeliveryAddress address={address} preference={order.delivery_preference} />}
+                    {!pickup && address?.street && <DeliveryAddress address={address} />}
                     {order.notes && (
                         <p className="text-store-muted mt-3 text-sm">
                             <span className="text-store-text font-semibold">Tus notas:</span> {order.notes}

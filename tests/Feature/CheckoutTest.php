@@ -654,25 +654,22 @@ class CheckoutTest extends TestCase
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
         // Aunque mande datos de entrega local, al recoger no se guardan.
-        $this->place(['local' => ['name' => 'Otro', 'point' => 'Otro lado', 'preferred_date' => today()->toDateString(), 'preferred_window' => 'Tarde']]);
+        $this->place(['local' => ['name' => 'Otro', 'point' => 'Otro lado']]);
 
         $order = Order::withoutGlobalScopes()->sole();
 
         $this->assertSame(DeliveryMethod::Pickup, $order->delivery_method);
         $this->assertNull($order->shipping_address);
-        $this->assertNull($order->delivery_preferred_date);
-        $this->assertNull($order->delivery_preferred_window);
         $this->assertSame('0.00', $order->shipping_cost);
     }
 
-    public function test_local_delivery_saves_the_point_and_the_customers_preference_apart_from_the_confirmed_date()
+    public function test_local_delivery_saves_the_point_and_leaves_the_date_for_the_admin()
     {
         $this->travelTo('2026-10-05 10:30:00');
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
         $this->place($this->local([
             'name' => ' Luisa Pérez ', 'point' => ' Hotel Sol, lobby ', 'references' => ' Frente a la playa ',
-            'preferred_date' => '2026-10-08', 'preferred_window' => ' Entre 4 y 6 pm ',
         ]))->assertRedirect(self::COPPERS.'/pedido/CP-00001/gracias');
 
         $order = Order::withoutGlobalScopes()->sole();
@@ -681,37 +678,34 @@ class CheckoutTest extends TestCase
             'name' => 'Luisa Pérez', 'phone' => '755 123 4567', 'street' => 'Hotel Sol, lobby', 'city' => 'Zihuatanejo', 'notes' => 'Frente a la playa',
         ], $order->shipping_address);
 
-        // La preferencia va aparte: la fecha confirmada sigue vacía hasta que la ponga el admin.
-        $this->assertSame('2026-10-08', $order->delivery_preferred_date->toDateString());
-        $this->assertSame('Entre 4 y 6 pm', $order->delivery_preferred_window);
-        $this->assertSame('jueves 8 de octubre de 2026 · Entre 4 y 6 pm', $order->deliveryPreference());
+        // No se le pide día ni hora: la fecha la acuerda y captura el admin después.
         $this->assertNull($order->delivery_scheduled_date);
         $this->assertNull($order->delivery_window);
 
         // No se guarda en la libreta de direcciones.
         $this->assertSame(0, Address::count());
 
-        // La página de gracias la muestra.
+        // La página de gracias lo muestra, sin ninguna preferencia de día u hora.
         $this->actingAs($this->ana, 'customer')->get(self::COPPERS.'/pedido/CP-00001/gracias')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('order.shipping_address.street', 'Hotel Sol, lobby')
-                ->where('order.delivery_preference', 'jueves 8 de octubre de 2026 · Entre 4 y 6 pm')
+                ->missing('order.delivery_preference')
                 ->where('pickup', null));
     }
 
-    public function test_the_day_and_time_preference_are_optional()
+    public function test_the_checkout_does_not_take_a_day_or_time_for_local_delivery()
     {
         $this->addToCart($this->variant($this->product($this->coppers, 'Camisa')));
 
-        $this->place(['delivery_method' => 'local', 'local' => ['name' => 'Ana Pérez', 'point' => 'Calle Hidalgo 5']])
-            ->assertSessionHasNoErrors();
+        // Aunque lo manden a mano, ni se valida ni se guarda.
+        $this->place($this->local(['preferred_date' => '2026-10-04', 'preferred_window' => 'Tarde']))->assertSessionHasNoErrors();
 
         $order = Order::withoutGlobalScopes()->sole();
 
-        $this->assertNull($order->delivery_preferred_date);
-        $this->assertNull($order->delivery_preferred_window);
-        $this->assertNull($order->deliveryPreference());
-        $this->assertNull($order->shipping_address['notes']);
+        $this->assertNull($order->delivery_scheduled_date);
+        $this->assertNull($order->delivery_window);
+        $this->assertSame('Portón negro', $order->shipping_address['notes']);
+        $this->assertStringNotContainsString('prefer', json_encode($order->getAttributes()));
     }
 
     public function test_local_delivery_requires_who_receives_and_the_delivery_point()
@@ -725,15 +719,12 @@ class CheckoutTest extends TestCase
             ->assertSessionHasErrors(['local.name', 'local.point' => 'Escribe el punto de entrega o la dirección en Zihuatanejo.']);
         $this->place(['delivery_method' => 'local', 'local' => ['name' => 'Ana', 'point' => '   ']])
             ->assertSessionHasErrors('local.point');
-        $this->place($this->local(['preferred_date' => '2026-10-04']))
-            ->assertSessionHasErrors(['local.preferred_date' => 'El día preferido no puede ser anterior a hoy.']);
-        $this->place($this->local(['preferred_date' => 'mañana']))->assertSessionHasErrors('local.preferred_date');
 
         $this->assertSame(0, Order::withoutGlobalScopes()->count());
         $this->assertSame(5, $variant->fresh()->stock);
 
-        // Hoy mismo sí se vale.
-        $this->place($this->local(['preferred_date' => '2026-10-05']))->assertSessionHasNoErrors();
+        // Con los dos datos completos sí se aparta.
+        $this->place($this->local())->assertSessionHasNoErrors();
         $this->assertSame(1, Order::withoutGlobalScopes()->count());
     }
 

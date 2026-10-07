@@ -119,8 +119,9 @@ class DashboardTest extends TestCase
         $stock->change($product->variants()->where('size', '26')->first(), StockMovementType::Adjustment, -1);
         $stock->change($product->variants()->where('size', '27')->first(), StockMovementType::Adjustment, -1);
 
-        $titles = $this->staffG5->notifications()->orderBy('created_at')->get()->map(fn ($n) => $n->data['title'])->all();
-        $this->assertSame(['Talla agotada', 'Producto agotado'], $titles);
+        // Los dos avisos caen en el mismo segundo, así que no se compara el orden.
+        $titles = $this->staffG5->notifications()->get()->map(fn ($n) => $n->data['title'])->sort()->values()->all();
+        $this->assertSame(['Producto agotado', 'Talla agotada'], $titles);
 
         $last = $this->staffG5->notifications()->get()->first(fn ($n) => $n->data['title'] === 'Producto agotado');
         $this->assertStringContainsString('se agotó todo el producto «Tenis Predator»', $last->data['body']);

@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\TelegramMessage;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
@@ -94,6 +95,9 @@ class CancellationRequestService
     private function notifyStaff(Order $order, Customer $customer, ?string $note): void
     {
         $store = Store::findOrFail($order->store_id);
+
+        app(TelegramNotifier::class)->queue(TelegramMessage::cancellationRequest($order, $store, $customer, $note));
+
         $recipients = StoreUsers::toNotify($store);
 
         if ($recipients->isEmpty()) {

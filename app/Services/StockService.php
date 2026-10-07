@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\TelegramMessage;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,13 @@ class StockService
         $store = Store::findOrFail($product->store_id);
 
         $productSoldOut = ! ProductVariant::query()->where('product_id', $product->id)->where('stock', '>', 0)->exists();
+
+        // Al dueño por Telegram solo cuando se agota el modelo completo. A este punto se llega
+        // únicamente cuando una talla pasa de tener piezas a 0, así que no se repite mientras siga
+        // agotado y vuelve a avisar si se repone y se agota otra vez.
+        if ($productSoldOut) {
+            app(TelegramNotifier::class)->queue(TelegramMessage::soldOut($product, $store));
+        }
 
         $recipients = StoreUsers::toNotify($store);
 

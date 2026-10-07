@@ -51,6 +51,12 @@ class OrderDeliveryService
 
             $locked->update(['delivery_scheduled_date' => $date, 'delivery_window' => $window]);
 
+            // Pedido en efectivo: no vence mientras su fecha de entrega esté vigente. Pasa al final de ese
+            // día, sin pasar del tope de shop.cash_reserve_max_days desde que se creó.
+            if ($locked->paysInCash()) {
+                $locked->update(['expires_at' => $locked->cashDeadlineFor($date), 'cash_overdue_notified_at' => null]);
+            }
+
             $this->statuses->annotate(
                 $locked,
                 $actor,

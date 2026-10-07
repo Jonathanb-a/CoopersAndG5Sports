@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Store;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -14,11 +15,16 @@ use Illuminate\Support\Facades\DB;
 /**
  * Cifras de ventas de una tienda para el dashboard.
  *
- * Una venta es un pedido pagado, enviado o entregado (nunca apartado ni cancelado) y
- * entra al periodo por su fecha de pago (paid_at).
+ * Una venta es un pedido pagado, enviado o entregado (nunca apartado ni cancelado) y entra al
+ * periodo por su fecha de pago (paid_at). Excepción: un pedido en efectivo es venta hasta que se
+ * ENTREGA (se cobra al entregar) y entra por su fecha de entrega (delivered_at); mientras esté
+ * confirmado o enviado cuenta como «por cobrar».
  */
 class SalesReport
 {
+    /** Fecha en la que un pedido entra a las ventas: la entrega si es efectivo, el pago en los demás. */
+    private const SALE_DATE = "CASE WHEN orders.payment_method = 'cash' THEN orders.delivered_at ELSE orders.paid_at END";
+
     /**
      * @return array{sales: float, orders: int, average: float, cost: float, profit: float}
      */
@@ -70,8 +76,8 @@ class SalesReport
 
         // Sumado en la base de datos: un renglón por día, no un renglón por pedido.
         $this->sales($store, $from, $to)
-            ->selectRaw('DATE(orders.paid_at) as day, COALESCE(SUM(orders.total), 0) as total')
-            ->groupByRaw('DATE(orders.paid_at)')
+            ->selectRaw('DATE('.self::SALE_DATE.') as day, COALESCE(SUM(orders.total), 0) as total')
+            ->groupByRaw('DATE('.self::SALE_DATE.')')
             ->get()
             ->each(function ($row) use (&$days) {
                 $days[Carbon::parse($row->day)->toDateString()] = (float) $row->total;
@@ -143,7 +149,8 @@ class SalesReport
     }
 
     /**
-     * Por cobrar: apartados vigentes (sin pagar y con el plazo todavía abierto) al día de hoy.
+     * Por cobrar al día de hoy: apartados vigentes (sin pagar y con el plazo todavía abierto) y los
+     * pedidos en efectivo ya confirmados o enviados, que se cobran al entregarlos.
      *
      * @return array{orders: int, amount: float}
      */
@@ -151,8 +158,13 @@ class SalesReport
     {
         $row = DB::table('orders')
             ->where('store_id', $store->getKey())
-            ->where('status', OrderStatus::Reserved->value)
-            ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $reserved) => $reserved
+                    ->where('status', OrderStatus::Reserved->value)
+                    ->where(fn (Builder $open) => $open->whereNull('expires_at')->orWhere('expires_at', '>', now())))
+                ->orWhere(fn (Builder $cash) => $cash
+                    ->where('payment_method', PaymentMethod::Cash->value)
+                    ->whereIn('status', [OrderStatus::Paid->value, OrderStatus::Shipped->value])))
             ->selectRaw('COUNT(*) as orders, COALESCE(SUM(total), 0) as amount')
             ->first();
 
@@ -198,7 +210,16 @@ class SalesReport
     {
         return DB::table('orders')
             ->where('orders.store_id', $store->getKey())
-            ->whereIn('orders.status', OrderStatus::saleValues())
-            ->whereBetween('orders.paid_at', [$from, $to]);
+            ->where(function (Builder $query) {
+                // Efectivo: es venta hasta que se entrega, que es cuando se cobra. Nunca si se canceló.
+                $query->where(fn (Builder $cash) => $cash
+                    ->where('orders.payment_method', PaymentMethod::Cash->value)
+                    ->where('orders.status', OrderStatus::Delivered->value))
+                    // Transferencia (y mostrador): desde que está pagado, enviado o entregado.
+                    ->orWhere(fn (Builder $other) => $other
+                        ->where(fn (Builder $method) => $method->whereNull('orders.payment_method')->orWhere('orders.payment_method', '!=', PaymentMethod::Cash->value))
+                        ->whereIn('orders.status', OrderStatus::saleValues()));
+            })
+            ->whereRaw('('.self::SALE_DATE.') BETWEEN ? AND ?', [$from->toDateTimeString(), $to->toDateTimeString()]);
     }
 }

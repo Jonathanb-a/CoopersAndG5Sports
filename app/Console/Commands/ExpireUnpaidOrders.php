@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\OrderCancellationService;
+use App\Services\OverdueCashOrders;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -23,12 +24,13 @@ class ExpireUnpaidOrders extends Command
 
     protected $description = 'Cancela los pedidos apartados cuyo plazo de pago ya venció y regresa su stock';
 
-    public function handle(OrderCancellationService $cancellations): int
+    public function handle(OrderCancellationService $cancellations, OverdueCashOrders $overdueCash): int
     {
         $orders = $this->expired()->with(['store', 'customer'])->orderBy('id')->get();
+        $overdue = $overdueCash->query()->with(['store', 'customer'])->orderBy('id')->get();
 
         if ($this->option('dry-run')) {
-            return $this->list($orders);
+            return $this->list($orders, $overdue);
         }
 
         $cancelled = 0;
@@ -70,6 +72,9 @@ class ExpireUnpaidOrders extends Command
         Log::info($summary);
         $this->info($summary);
 
+        // Los pedidos en efectivo ya confirmados no se cancelan: si pasó su fecha, se le avisa al dueño.
+        $this->notifyOverdueCash($overdue);
+
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
 
@@ -82,8 +87,45 @@ class ExpireUnpaidOrders extends Command
             ->where('expires_at', '<=', now());
     }
 
-    private function list($orders): int
+    /** Avisa de cada pedido en efectivo sin entregar. Un aviso que falla no frena a los demás. */
+    private function notifyOverdueCash($overdue): void
     {
+        $notified = 0;
+
+        foreach ($overdue as $order) {
+            try {
+                if (app(OverdueCashOrders::class)->notify($order)) {
+                    $notified++;
+                    $this->line("Aviso: {$order->number} es en efectivo y pasó su fecha sin entregarse");
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+                Log::error("orders:expire-unpaid: no se pudo avisar del pedido en efectivo {$order->number}: {$exception->getMessage()}");
+            }
+        }
+
+        if ($notified > 0) {
+            Log::info("orders:expire-unpaid: {$notified} pedidos en efectivo sin entregar avisados al dueño.");
+            $this->info("{$notified} pedidos en efectivo sin entregar avisados al dueño.");
+        }
+    }
+
+    private function list($orders, $overdue): int
+    {
+        if ($overdue->isNotEmpty()) {
+            $this->table(
+                ['Pedido en efectivo sin entregar', 'Tienda', 'Cliente', 'Por cobrar', 'Pasó su fecha'],
+                $overdue->map(fn (Order $order) => [
+                    $order->number,
+                    $order->store?->name ?? '—',
+                    $order->customer?->name ?? '—',
+                    $order->total,
+                    $order->expires_at->format('d/m/Y H:i'),
+                ])->all(),
+            );
+            $this->info("Se avisaría de {$overdue->count()} pedidos en efectivo. No se tocó nada (--dry-run).");
+        }
+
         if ($orders->isEmpty()) {
             $this->info('No hay apartados vencidos.');
 

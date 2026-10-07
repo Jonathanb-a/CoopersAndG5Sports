@@ -84,6 +84,13 @@ function OrderThanksContent({ order, pickup, bankInfo, whatsapp }: OrderThanksPr
                             Ten el efectivo a la mano {pickup ? 'cuando recojas tu pedido' : 'a la hora de la entrega'}. No necesitas hacer
                             transferencia ni mandar comprobante.
                         </p>
+                        {order.expires_at_text && (
+                            <p className="text-store-muted mt-3 text-sm">
+                                Te contactamos por WhatsApp para confirmar tu pedido. Si no se confirma antes del{' '}
+                                <strong className="text-store-text">{order.expires_at_text}</strong>, el apartado se cancela y las piezas vuelven a la
+                                venta.
+                            </p>
+                        )}
                         {whatsapp.question_url && (
                             <div className="mt-6">
                                 <a

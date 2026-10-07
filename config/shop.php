@@ -20,6 +20,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | reserve_hours: horas que un pedido apartado espera el pago por transferencia antes de vencer.
+    | cash_reserve_hours: horas que un pedido en efectivo espera su confirmación antes de vencer.
+    | cash_reserve_max_days: tope de días, contados desde que se creó el pedido, a los que puede llegar
+    | su vencimiento (por darle más tiempo o asignarle fecha de entrega).
     | max_open_reservations: máximo de pedidos apartados sin pagar que un cliente puede tener a la vez
     | en una misma tienda.
     | order_prefixes: prefijo del número de pedido por tienda (slug => prefijo): CP-00042, G5-00042.
@@ -28,6 +31,10 @@ return [
     */
 
     'reserve_hours' => 48,
+
+    'cash_reserve_hours' => 72,
+
+    'cash_reserve_max_days' => 7,
 
     'max_open_reservations' => 3,
 

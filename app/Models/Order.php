@@ -9,6 +9,7 @@ use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToStore;
+use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +41,7 @@ class Order extends Model
         'total',
         'coupon_id',
         'expires_at',
+        'cash_overdue_notified_at',
         'paid_at',
         'payment_method',
         'payment_reference',
@@ -93,6 +95,7 @@ class Order extends Model
             'shipping_cost' => 'decimal:2',
             'total' => 'decimal:2',
             'expires_at' => 'datetime',
+            'cash_overdue_notified_at' => 'datetime',
             'paid_at' => 'datetime',
             'payment_method' => PaymentMethod::class,
             'delivered_at' => 'datetime',
@@ -135,6 +138,21 @@ class Order extends Model
     public function paysInCash(): bool
     {
         return $this->payment_method === PaymentMethod::Cash;
+    }
+
+    /** Lo más lejos que puede vencer un pedido en efectivo: shop.cash_reserve_max_days desde que se creó. */
+    public function cashReserveCap(): CarbonInterface
+    {
+        return $this->created_at->copy()->addDays((int) config('shop.cash_reserve_max_days', 7));
+    }
+
+    /** Vencimiento de un pedido en efectivo con entrega ese día: el final del día, sin pasar del tope. */
+    public function cashDeadlineFor(CarbonInterface $deliveryDate): CarbonInterface
+    {
+        $endOfDay = $deliveryDate->copy()->endOfDay();
+        $cap = $this->cashReserveCap();
+
+        return $endOfDay->gt($cap) ? $cap : $endOfDay;
     }
 
     /** Cancelado después de pagado y todavía sin devolverle el dinero al cliente. */

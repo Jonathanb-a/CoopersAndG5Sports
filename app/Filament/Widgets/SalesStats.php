@@ -42,7 +42,7 @@ class SalesStats extends StatsOverviewWidget
             $this->compared(Stat::make('Ticket promedio', Number::currency($summary['average'])), $summary['average'], $previous['average']),
             // Es una foto de hoy, no del periodo: no hay un «antes» contra el cual compararla.
             Stat::make('Por cobrar', Number::currency($receivable['amount']))
-                ->description($receivable['orders'] === 1 ? '1 apartado vigente, al día de hoy' : "{$receivable['orders']} apartados vigentes, al día de hoy")
+                ->description($receivable['orders'] === 1 ? '1 pedido por cobrar, al día de hoy' : "{$receivable['orders']} pedidos por cobrar, al día de hoy")
                 ->color('warning'),
         ];
 

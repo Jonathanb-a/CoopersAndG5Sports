@@ -352,7 +352,7 @@ class SalesDashboardRulesTest extends TestCase
         Livewire::test(SalesStats::class)
             ->assertSee('Por cobrar')
             ->assertSee('$950.50')
-            ->assertSee('2 apartados vigentes');
+            ->assertSee('2 pedidos por cobrar');
     }
 
     // ---- Apartados por vencer, en orden -----------------------------------------------------------

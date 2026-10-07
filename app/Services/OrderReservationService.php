@@ -17,6 +17,13 @@ class OrderReservationService
 {
     public const EXTENSION_HOURS = [24, 48];
 
+    /** Se le da más tiempo a un apartado, o a un pedido en efectivo mientras no se entregue. */
+    public static function canExtend(Order $order): bool
+    {
+        return $order->status === OrderStatus::Reserved
+            || ($order->paysInCash() && in_array($order->status, [OrderStatus::Paid, OrderStatus::Shipped], true));
+    }
+
     public function __construct(
         private readonly OrderStatusService $statuses,
         private readonly StockService $stock,
@@ -37,14 +44,33 @@ class OrderReservationService
         DB::transaction(function () use ($order, $hours, $actor) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
 
-            if ($locked->status !== OrderStatus::Reserved) {
+            if (! self::canExtend($locked)) {
                 throw new InvalidOrderTransitionException(
                     "El pedido {$locked->number} está «{$locked->statusLabel()}»: solo a un pedido apartado se le da más tiempo."
                 );
             }
 
             $base = $locked->expires_at && $locked->expires_at->isFuture() ? $locked->expires_at->copy() : now();
-            $locked->expires_at = $base->addHours($hours);
+            $new = $base->copy()->addHours($hours);
+
+            // Un pedido en efectivo no puede pasar de shop.cash_reserve_max_days desde que se creó.
+            if ($locked->paysInCash()) {
+                $cap = $locked->cashReserveCap();
+
+                if ($base->gte($cap)) {
+                    throw new InvalidOrderTransitionException(
+                        "El pedido {$locked->number} ya llegó al máximo de ".(int) config('shop.cash_reserve_max_days', 7).' días: no se le puede dar más tiempo.'
+                    );
+                }
+
+                if ($new->gt($cap)) {
+                    $new = $cap->copy();
+                }
+            }
+
+            $locked->expires_at = $new;
+            // Con fecha nueva, si vuelve a pasarse se avisa otra vez.
+            $locked->cash_overdue_notified_at = null;
             $locked->save();
 
             $this->statuses->annotate(
@@ -118,7 +144,7 @@ class OrderReservationService
                 Coupon::withoutGlobalScopes()->whereKey($locked->coupon_id)->increment('used_count');
             }
 
-            $locked->refresh()->update(['expires_at' => now()->addHours((int) config('shop.reserve_hours', 48))]);
+            $locked->refresh()->update(['expires_at' => now()->addHours((int) config($locked->paysInCash() ? 'shop.cash_reserve_hours' : 'shop.reserve_hours', $locked->paysInCash() ? 72 : 48))]);
         });
 
         return $order->refresh();

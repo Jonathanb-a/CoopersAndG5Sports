@@ -19,7 +19,6 @@ use App\Models\User;
 use App\Services\OrderCancellationService;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
-use App\Services\SalesReport;
 use App\Support\OrderWhatsAppMessage;
 use App\Support\TelegramMessage;
 use Filament\Facades\Filament;
@@ -123,8 +122,8 @@ class CashPaymentTest extends TestCase
         $cash = $this->last();
         $this->assertSame(PaymentMethod::Cash, $cash->payment_method);
         $this->assertTrue($cash->paysInCash());
-        // En efectivo se paga al entregar: no hay fecha límite de pago.
-        $this->assertNull($cash->expires_at);
+        // En efectivo vence a las 72 h si no lo confirman (transferencia: 48 h).
+        $this->assertSame('2026-10-10 10:00:00', $cash->expires_at->toDateTimeString());
         $this->assertSame(OrderStatus::Reserved, $cash->status);
 
         // Sin dato (clientes de antes de este campo) se paga por transferencia.
@@ -150,7 +149,7 @@ class CashPaymentTest extends TestCase
         app(OrderService::class)->place($this->coppers, $this->ana, DeliveryMethod::Pickup, null, '7551234567', null, PaymentMethod::Card);
     }
 
-    public function test_a_cash_order_does_not_expire_by_itself_and_a_transfer_order_does()
+    public function test_a_cash_order_waits_longer_than_a_transfer_order_before_expiring()
     {
         $this->travelTo('2026-10-07 10:00:00');
         $cashVariant = $this->variant();
@@ -161,20 +160,14 @@ class CashPaymentTest extends TestCase
         $this->place(['payment_method' => 'transfer'], $transferVariant);
         $transfer = $this->last();
 
-        // Pasan tres días: la transferencia venció, el efectivo sigue esperando su entrega.
-        $this->travelTo('2026-10-10 10:00:00');
+        // A los 2 días y 1 hora: la transferencia (48 h) venció; el efectivo (72 h) todavía espera.
+        $this->travelTo('2026-10-09 11:00:00');
         $this->artisan('orders:expire-unpaid')->expectsOutputToContain('1 pedidos cancelados')->assertSuccessful();
 
         $this->assertSame(OrderStatus::Reserved, $cash->fresh()->status);
         $this->assertSame(OrderStatus::Cancelled, $transfer->fresh()->status);
         $this->assertSame(9, $cashVariant->fresh()->stock);
         $this->assertSame(10, $transferVariant->fresh()->stock);
-
-        // Ni «por cobrar» ni los apartados por vencer lo confunden: sigue vigente.
-        $this->assertSame(
-            ['orders' => 1, 'amount' => 500.0],
-            app(SalesReport::class)->receivable($this->coppers),
-        );
     }
 
     public function test_cash_orders_still_count_for_the_reservation_limit()
@@ -208,9 +201,9 @@ class CashPaymentTest extends TestCase
 
         $this->assertSame('cash', $cash['order']['payment_method']);
         $this->assertSame('local', $cash['order']['delivery_method']);
-        // Efectivo: sin plazo ni comprobante; solo queda el botón de dudas.
-        $this->assertNull($cash['order']['expires_at']);
-        $this->assertNull($cash['order']['expires_at_text']);
+        // Efectivo: sin comprobante (solo el botón de dudas), con su fecha para que lo confirmen.
+        $this->assertNotNull($cash['order']['expires_at']);
+        $this->assertNotNull($cash['order']['expires_at_text']);
         $this->assertNull($cash['whatsapp']['receipt_url']);
         $this->assertNotNull($cash['whatsapp']['question_url']);
     }
@@ -222,9 +215,8 @@ class CashPaymentTest extends TestCase
 
         $props = $this->props(self::COPPERS.'/mi-cuenta/pedidos/CP-00001');
         $this->assertSame('cash', $props['order']['payment_method']);
-        $this->assertNull($props['order']['expires_at']);
+        $this->assertNotNull($props['order']['expires_at']);
         $this->assertNull($props['whatsapp']['receipt_url']);
-        $this->assertNull($props['order']['expiring_label']);
 
         // Un pedido de transferencia sí lleva el botón del comprobante mientras está apartado.
         $this->place(['payment_method' => 'transfer']);
@@ -248,6 +240,7 @@ class CashPaymentTest extends TestCase
         $this->assertStringContainsString("Entrega: Entrega local\n", $text);
         $this->assertStringContainsString('Pago: Efectivo (se cobra al entregar)', $text);
         $this->assertStringNotContainsString('Paga antes de', $text);
+        $this->assertStringContainsString('Confirmar antes de: 10/10/2026 10:00', $text);
 
         $this->place(['payment_method' => 'cash']);
         $this->assertStringContainsString('Pago: Efectivo (se cobra al recoger)', TelegramMessage::newOrder($this->last(), $this->coppers, $this->ana));
@@ -280,7 +273,7 @@ class CashPaymentTest extends TestCase
 
     // ---- Panel ------------------------------------------------------------------------------------
 
-    public function test_the_panel_confirms_a_cash_order_without_a_reference_and_does_not_extend_it()
+    public function test_the_panel_confirms_a_cash_order_without_a_reference()
     {
         $this->place(['payment_method' => 'cash']);
         $cash = $this->last();
@@ -295,9 +288,9 @@ class CashPaymentTest extends TestCase
             ->assertHasFormErrors(['payment_reference']);
         $this->assertSame(OrderStatus::Reserved, $transfer->fresh()->status);
 
-        // Efectivo: no hay fecha límite que alargar y no pide referencia.
+        // Efectivo: también se le puede dar más tiempo, y confirmarlo no pide referencia.
         Livewire::test(ViewOrder::class, ['record' => $cash->getRouteKey()])
-            ->assertActionHidden('extend')
+            ->assertActionVisible('extend')
             ->assertSee('Efectivo')
             ->callAction('markPaid', data: [])
             ->assertHasNoFormErrors();

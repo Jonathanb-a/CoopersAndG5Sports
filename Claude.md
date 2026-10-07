@@ -186,10 +186,29 @@ Sensación: cancha y calle, energía, grafiti.
   la tienda en línea. Los pedidos sin dato se tratan como transferencia.
 - Transferencia: igual que antes. Vence en shop.reserve_hours y el cliente manda
   su comprobante por WhatsApp con su número de pedido.
-- Efectivo: se paga al recibir (entrega local) o al recoger. No tiene fecha
-  límite de pago (expires_at null), así que orders:expire-unpaid no lo
-  cancela y no se le "da más tiempo". Sigue contando para
-  shop.max_open_reservations y se cancela a mano (regresa el stock).
+- Efectivo: se paga al recibir (entrega local) o al recoger. Si no lo confirman
+  vence a las shop.cash_reserve_hours (72 h; transferencia sigue en 48 h) y
+  orders:expire-unpaid lo cancela igual que a los demás (libera el stock).
+  Cuenta para shop.max_open_reservations.
+- Fecha de entrega en efectivo: al asignarla el admin, expires_at pasa al final
+  de ese día, sin pasar de shop.cash_reserve_max_days (7) desde la creación.
+  "Dar más tiempo" también aplica a efectivo (apartado, pagado o enviado) con
+  ese mismo tope.
+- Un pedido en efectivo ya confirmado (pagado o enviado) NO se cancela solo.
+  Si pasa su fecha (expires_at) sin entregarse, orders:expire-unpaid avisa
+  una sola vez al dueño ("Pedido en efectivo sin entregar") por la campana y
+  por Telegram (orders.cash_overdue_notified_at); reprogramar o dar más
+  tiempo vuelve a armar el aviso.
 - Al confirmar un pedido en efectivo, "Marcar pagado" no pide referencia y
   solo lo deja listo para prepararse y enviarse: el dinero se cobra en la
   entrega. El aviso de WhatsApp lo dice así (no agradece un pago).
+
+## Conteo de ventas (dashboard y reportes)
+- Transferencia: cuenta como venta desde que está pagado (paid_at). La venta de
+  mostrador cuenta al crearse. Los pedidos sin forma de pago (anteriores) se
+  tratan como transferencia.
+- Efectivo: cuenta como venta solo cuando está ENTREGADO (se cobra al entregar),
+  en el día de delivered_at. Mientras esté apartado, confirmado o enviado
+  aparece en "Por cobrar" con su monto.
+- "Por cobrar" = apartados vigentes + pedidos en efectivo pagados o enviados.
+- Los cancelados (y las ventas de mostrador anuladas) no cuentan en nada.

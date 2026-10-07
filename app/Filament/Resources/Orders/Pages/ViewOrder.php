@@ -373,10 +373,11 @@ class ViewOrder extends ViewRecord
             ->label('Dar más tiempo')
             ->icon(Heroicon::OutlinedClock)
             ->color('gray')
-            // Un pedido en efectivo no tiene fecha límite de pago, así que no hay tiempo que darle.
-            ->visible(fn (Order $record) => $record->status === OrderStatus::Reserved && ! $record->paysInCash())
-            ->modalHeading('Dar más tiempo para pagar')
-            ->modalDescription('Se suma a la fecha límite de pago del pedido.')
+            ->visible(fn (Order $record) => OrderReservationService::canExtend($record))
+            ->modalHeading(fn (Order $record) => $record->paysInCash() ? 'Dar más tiempo al pedido' : 'Dar más tiempo para pagar')
+            ->modalDescription(fn (Order $record) => $record->paysInCash()
+                ? 'Se suma a la fecha límite del pedido, sin pasar de '.(int) config('shop.cash_reserve_max_days', 7).' días desde que se creó.'
+                : 'Se suma a la fecha límite de pago del pedido.')
             ->modalSubmitActionLabel('Dar más tiempo')
             ->schema([
                 Radio::make('hours')

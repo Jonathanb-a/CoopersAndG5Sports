@@ -53,7 +53,7 @@ class OrderService
      * CartChangedException con los avisos; el carrito de la sesión queda ya corregido.
      *
      * @param  array<string, mixed>|null  $shippingAddress  dirección de entrega (null al recoger en tienda)
-     * @param  PaymentMethod  $paymentMethod  transferencia (vence en shop.reserve_hours) o efectivo (se paga al entregar y no vence)
+     * @param  PaymentMethod  $paymentMethod  transferencia (vence en shop.reserve_hours) o efectivo (se paga al entregar; vence en shop.cash_reserve_hours si no lo confirman)
      *
      * @throws CartChangedException
      * @throws ReservationLimitException si el cliente ya tiene el máximo de apartados sin pagar en la tienda
@@ -129,8 +129,10 @@ class OrderService
                     'total' => CouponResult::money($subtotal - $discount + $shipping),
                     'coupon_id' => $applied?->coupon->id,
                     'payment_method' => $paymentMethod,
-                    // El pago en efectivo se hace al entregar: no hay plazo para pagar, así que no vence solo.
-                    'expires_at' => $paymentMethod === PaymentMethod::Cash ? null : now()->addHours((int) config('shop.reserve_hours', 48)),
+                    // Transferencia: reserve_hours para pagar. Efectivo: cash_reserve_hours para que lo confirmen.
+                    'expires_at' => $paymentMethod === PaymentMethod::Cash
+                        ? now()->addHours((int) config('shop.cash_reserve_hours', 72))
+                        : now()->addHours((int) config('shop.reserve_hours', 48)),
                     'notes' => filled($notes) ? trim($notes) : null,
                 ]);
 

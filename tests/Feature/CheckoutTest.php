@@ -549,20 +549,80 @@ class CheckoutTest extends TestCase
                 ->where('cart.discount', '0.00')
                 ->has('cart.lines', 1)
                 ->where('deliveryOptions', [
-                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null],
-                    ['value' => 'local', 'label' => 'Entrega local en Zihuatanejo', 'description' => 'Te lo llevamos a tu domicilio en Zihuatanejo.', 'cost' => '80.00', 'needs_address' => true, 'note' => 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega'],
-                    ['value' => 'nacional', 'label' => 'Envío nacional', 'description' => 'Te lo mandamos por paquetería a cualquier parte de México.', 'cost' => '250.00', 'needs_address' => true, 'note' => null],
+                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null, 'available' => true],
+                    ['value' => 'local', 'label' => 'Entrega a domicilio', 'description' => 'Solo Zihuatanejo', 'cost' => '80.00', 'needs_address' => true, 'note' => 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega', 'available' => true],
+                    ['value' => 'nacional', 'label' => 'Envío a todo el estado', 'description' => 'Te lo mandamos por paquetería.', 'cost' => '250.00', 'needs_address' => true, 'note' => null, 'available' => true],
                 ])
                 ->has('addresses', 1)
                 ->where('addresses.0.street', 'Calle Hidalgo 5')
                 ->where('phone', '7551112233')
                 ->where('reserveHours', 48));
 
-        // G5 no tiene costos: solo se puede recoger en tienda.
+        // G5 no tiene costos: solo se puede recoger en tienda, y el envío al estado sale como «Próximamente».
         $this->actingAs($this->ana, 'customer')->get(self::G5.'/checkout')
             ->assertInertia(fn (Assert $page) => $page
-                ->has('deliveryOptions', 1)
-                ->where('deliveryOptions.0.value', 'recoger'));
+                ->where('deliveryOptions', [
+                    ['value' => 'recoger', 'label' => 'Recoger en tienda', 'description' => 'Pasas por tu pedido a la tienda.', 'cost' => '0.00', 'needs_address' => false, 'note' => null, 'available' => true],
+                    ['value' => 'nacional', 'label' => 'Envío a todo el estado', 'description' => 'Estamos preparando los envíos a todo el estado.', 'cost' => null, 'needs_address' => false, 'note' => null, 'available' => false],
+                ]));
+    }
+
+    public function test_recoger_is_always_the_first_option_and_local_shows_only_when_configured()
+    {
+        $this->g5->update(['local_shipping_cost' => 0]);
+        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5])), host: self::G5);
+
+        // Costo 0: se ofrece y la pantalla lo pinta como «Gratis» (cost 0.00).
+        $this->actingAs($this->ana, 'customer')->get(self::G5.'/checkout')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('deliveryOptions', 3)
+                ->where('deliveryOptions.0.value', 'recoger')
+                ->where('deliveryOptions.1.value', 'local')
+                ->where('deliveryOptions.1.cost', '0.00')
+                ->where('deliveryOptions.1.description', 'Solo Zihuatanejo')
+                ->where('deliveryOptions.1.available', true)
+                ->where('deliveryOptions.2.value', 'nacional')
+                ->where('deliveryOptions.2.available', false));
+    }
+
+    public function test_the_coming_soon_shipping_can_not_be_forced_from_the_browser()
+    {
+        // G5 ofrece local pero no nacional: el «Próximamente» no se puede mandar a mano.
+        $this->g5->update(['local_shipping_cost' => 60]);
+        $variant = $this->variant($this->product($this->g5, 'Tenis', ['27' => 5]));
+        $this->addToCart($variant, host: self::G5);
+
+        $this->place([
+            'delivery_method' => 'nacional', 'address' => $this->addressData(),
+            'available' => true, 'shipping_cost' => 0, 'cost' => 0,
+        ], host: self::G5)->assertSessionHasErrors(['delivery_method' => 'Ese método de entrega no está disponible en esta tienda.']);
+
+        $this->assertSame(0, Order::withoutGlobalScopes()->count());
+        $this->assertSame(0, Address::count());
+        $this->assertSame(5, $variant->fresh()->stock);
+    }
+
+    public function test_each_store_charges_its_own_shipping_cost_from_the_database()
+    {
+        $this->g5->update(['local_shipping_cost' => 45.5]);
+        $this->addToCart($this->variant($this->product($this->coppers, 'Camisa', ['M' => 5], ['price' => 500])));
+        $this->addToCart($this->variant($this->product($this->g5, 'Tenis', ['27' => 5], ['price' => 900])), host: self::G5);
+
+        // El navegador manda otro costo en las dos: gana siempre el de la tienda.
+        $this->place(['delivery_method' => 'local', 'address' => $this->addressData(), 'shipping_cost' => 1, 'cost' => 1]);
+        $this->place(['delivery_method' => 'local', 'address_id' => $this->ana->addresses()->sole()->id, 'shipping_cost' => 1, 'cost' => 1], host: self::G5);
+
+        $coppers = Order::withoutGlobalScopes()->where('store_id', $this->coppers->id)->sole();
+        $g5 = Order::withoutGlobalScopes()->where('store_id', $this->g5->id)->sole();
+
+        $this->assertSame(['80.00', '580.00'], [$coppers->shipping_cost, $coppers->total]);
+        $this->assertSame(['45.50', '945.50'], [$g5->shipping_cost, $g5->total]);
+
+        // Copper's sí ofrece nacional; G5 no, aunque la otra tienda lo tenga.
+        $this->addToCart($this->variant($this->product($this->g5, 'Balón', ['5' => 5])), host: self::G5);
+        $this->place(['delivery_method' => 'nacional', 'address' => $this->addressData()], host: self::G5)
+            ->assertSessionHasErrors('delivery_method');
+        $this->assertSame(2, Order::withoutGlobalScopes()->count());
     }
 
     public function test_a_free_delivery_method_is_offered_when_its_cost_is_zero()
@@ -746,17 +806,25 @@ class CheckoutTest extends TestCase
 
     // ---- Panel ---------------------------------------------------------------------------------
 
-    public function test_the_owner_sets_the_shipping_costs_in_store_profile()
+    private function asPanelUser(User $user, Store $store): void
     {
-        $owner = User::factory()->create(['role' => UserRole::Owner]);
-        $this->actingAs($owner);
+        $this->actingAs($user);
         Filament::setCurrentPanel('admin');
         Filament::bootCurrentPanel();
-        Filament::setTenant($this->g5);
+        Filament::setTenant($store);
+    }
+
+    public function test_the_owner_sets_the_shipping_costs_in_store_profile()
+    {
+        $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->g5);
 
         Livewire::test(EditStoreProfile::class)
+            ->assertSee('Envíos')
+            ->assertSee('Ofrecer entrega a domicilio en Zihuatanejo')
+            ->assertSee('Ofrecer envíos a todo el estado/país')
+            ->assertFormSet(['offers_local_delivery' => false, 'offers_national_shipping' => false])
+            ->fillForm(['name' => 'Sports G5', 'offers_local_delivery' => true, 'local_shipping_cost' => 60, 'is_active' => true])
             ->assertSee('Costo de entrega local')
-            ->fillForm(['name' => 'Sports G5', 'local_shipping_cost' => 60, 'national_shipping_cost' => null, 'is_active' => true])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -765,9 +833,58 @@ class CheckoutTest extends TestCase
         $this->assertSame('60.00', $this->g5->local_shipping_cost);
         $this->assertNull($this->g5->national_shipping_cost);
 
+        // Con 0 se ofrece gratis.
         Livewire::test(EditStoreProfile::class)
-            ->fillForm(['local_shipping_cost' => -5])
+            ->assertFormSet(['offers_local_delivery' => true, 'offers_national_shipping' => false])
+            ->fillForm(['local_shipping_cost' => 0, 'offers_national_shipping' => true, 'national_shipping_cost' => 249.9])
             ->call('save')
-            ->assertHasFormErrors(['local_shipping_cost']);
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(['0.00', '249.90'], [$this->g5->refresh()->local_shipping_cost, $this->g5->national_shipping_cost]);
+    }
+
+    public function test_turning_a_shipping_switch_off_saves_the_cost_as_null()
+    {
+        $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->coppers);
+
+        Livewire::test(EditStoreProfile::class)
+            ->assertFormSet(['offers_local_delivery' => true, 'offers_national_shipping' => true])
+            ->fillForm(['offers_national_shipping' => false])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->coppers->refresh();
+
+        $this->assertSame('80.00', $this->coppers->local_shipping_cost);
+        $this->assertNull($this->coppers->national_shipping_cost);
+        // La otra tienda no se toca.
+        $this->assertNull($this->g5->fresh()->local_shipping_cost);
+    }
+
+    public function test_the_shipping_cost_must_be_a_number_from_zero_with_two_decimals()
+    {
+        $this->asPanelUser(User::factory()->create(['role' => UserRole::Owner]), $this->g5);
+
+        foreach ([-5, 'gratis', 10.999, null] as $bad) {
+            Livewire::test(EditStoreProfile::class)
+                ->fillForm(['offers_local_delivery' => true, 'local_shipping_cost' => $bad])
+                ->call('save')
+                ->assertHasFormErrors(['local_shipping_cost']);
+        }
+
+        $this->assertNull($this->g5->fresh()->local_shipping_cost);
+    }
+
+    public function test_only_the_owner_edits_the_shipping_settings()
+    {
+        $staff = User::factory()->create(['role' => UserRole::Staff]);
+        $staff->stores()->attach($this->g5);
+        $this->asPanelUser($staff, $this->g5);
+
+        $this->assertFalse(EditStoreProfile::canView($this->g5));
+        Livewire::test(EditStoreProfile::class)->assertNotFound();
+        $this->get('http://localhost/admin/'.$this->g5->getRouteKey().'/profile')->assertNotFound();
+
+        $this->assertNull($this->g5->fresh()->local_shipping_cost);
     }
 }

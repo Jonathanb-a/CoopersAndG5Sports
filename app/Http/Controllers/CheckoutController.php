@@ -135,13 +135,16 @@ class CheckoutController extends Controller
         return $address;
     }
 
-    /** Opciones de entrega para la pantalla, con su etiqueta y costo. */
+    /**
+     * Opciones de entrega para la pantalla, con su etiqueta y costo. El envío a todo el estado sale
+     * siempre: si la tienda no lo ofrece va deshabilitado como «Próximamente» (y store() lo rechaza).
+     */
     private function deliveryOptions(Store $store): array
     {
         $labels = [
             DeliveryMethod::Pickup->value => ['Recoger en tienda', 'Pasas por tu pedido a la tienda.'],
-            DeliveryMethod::Local->value => ['Entrega local en Zihuatanejo', 'Te lo llevamos a tu domicilio en Zihuatanejo.'],
-            DeliveryMethod::National->value => ['Envío nacional', 'Te lo mandamos por paquetería a cualquier parte de México.'],
+            DeliveryMethod::Local->value => ['Entrega a domicilio', 'Solo Zihuatanejo'],
+            DeliveryMethod::National->value => ['Envío a todo el estado', 'Te lo mandamos por paquetería.'],
         ];
 
         $options = [];
@@ -157,6 +160,19 @@ class CheckoutController extends Controller
                 'note' => $method === DeliveryMethod::Local->value
                     ? 'Te contactaremos por WhatsApp para acordar fecha y hora de entrega'
                     : null,
+                'available' => true,
+            ];
+        }
+
+        if ($store->national_shipping_cost === null) {
+            $options[] = [
+                'value' => DeliveryMethod::National->value,
+                'label' => $labels[DeliveryMethod::National->value][0],
+                'description' => 'Estamos preparando los envíos a todo el estado.',
+                'cost' => null,
+                'needs_address' => false,
+                'note' => null,
+                'available' => false,
             ];
         }
 

@@ -2,6 +2,7 @@ import { StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
 import { Field, TextAreaField } from '@/components/store/form';
 import { Reveal } from '@/components/store/reveal';
+import { Tag } from '@/components/store/tag';
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import StoreLayout from '@/Themes';
@@ -13,9 +14,12 @@ interface DeliveryOption {
     value: string;
     label: string;
     description: string;
-    cost: string;
+    /** Null cuando la tienda todavía no ofrece el método. */
+    cost: string | null;
     needs_address: boolean;
     note: string | null;
+    /** False = «Próximamente»: se muestra deshabilitado y el servidor lo rechaza. */
+    available: boolean;
 }
 
 interface CheckoutProps {
@@ -68,7 +72,7 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
         phone: string;
         notes: string;
     }>({
-        delivery_method: deliveryOptions.length === 1 ? deliveryOptions[0].value : '',
+        delivery_method: 'recoger',
         address_id: addresses[0]?.id ?? null,
         address: emptyAddress,
         phone: phone ?? '',
@@ -78,7 +82,7 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
     // Los errores de la dirección llegan como "address.street", "address.zip"...
     const errors = form.errors as Record<string, string | undefined>;
 
-    const delivery = deliveryOptions.find((option) => option.value === form.data.delivery_method) ?? null;
+    const delivery = deliveryOptions.find((option) => option.available && option.value === form.data.delivery_method) ?? null;
     const needsAddress = delivery?.needs_address ?? false;
     const newAddress = form.data.address_id === null;
 
@@ -180,26 +184,50 @@ function CheckoutContent({ cart, deliveryOptions, addresses, phone, reserveHours
                         <fieldset>
                             <legend className="sr-only">Método de entrega</legend>
                             <div className="space-y-3">
-                                {deliveryOptions.map((option) => (
-                                    <label key={option.value} className={choice(form.data.delivery_method === option.value)}>
-                                        <input
-                                            type="radio"
-                                            name="delivery_method"
-                                            value={option.value}
-                                            checked={form.data.delivery_method === option.value}
-                                            onChange={() => form.setData('delivery_method', option.value)}
-                                            className="accent-store-action mt-1 size-5 shrink-0"
-                                        />
-                                        <span className="min-w-0 flex-1">
-                                            <span className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
-                                                {option.label}
-                                                <span>{Number(option.cost) === 0 ? 'Gratis' : formatMoney(option.cost)}</span>
+                                {deliveryOptions.map((option) =>
+                                    option.available ? (
+                                        <label key={option.value} className={choice(form.data.delivery_method === option.value)}>
+                                            <input
+                                                type="radio"
+                                                name="delivery_method"
+                                                value={option.value}
+                                                checked={form.data.delivery_method === option.value}
+                                                onChange={() => form.setData('delivery_method', option.value)}
+                                                className="accent-store-action mt-1 size-5 shrink-0"
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
+                                                    {option.label}
+                                                    <span>{Number(option.cost) === 0 ? 'Gratis' : formatMoney(option.cost ?? 0)}</span>
+                                                </span>
+                                                <span className="text-store-muted block text-sm">{option.description}</span>
+                                                {option.note && <span className="mt-1 block text-sm font-medium">{option.note}.</span>}
                                             </span>
-                                            <span className="text-store-muted block text-sm">{option.description}</span>
-                                            {option.note && <span className="mt-1 block text-sm font-medium">{option.note}.</span>}
-                                        </span>
-                                    </label>
-                                ))}
+                                        </label>
+                                    ) : (
+                                        <label
+                                            key={option.value}
+                                            className="rounded-store border-store-border flex cursor-not-allowed items-start gap-3 border-[length:var(--store-border-width)] border-dashed p-4"
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="delivery_method"
+                                                value={option.value}
+                                                disabled
+                                                checked={false}
+                                                readOnly
+                                                className="mt-1 size-5 shrink-0 opacity-40"
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-semibold">
+                                                    <span className="text-store-muted">{option.label}</span>
+                                                    <Tag kind="backorder">Próximamente</Tag>
+                                                </span>
+                                                <span className="text-store-muted block text-sm">{option.description}</span>
+                                            </span>
+                                        </label>
+                                    ),
+                                )}
                             </div>
                             {errors.delivery_method && (
                                 <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">

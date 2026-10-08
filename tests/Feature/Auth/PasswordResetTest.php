@@ -22,14 +22,14 @@ class PasswordResetTest extends CustomerAuthTestCase
         $customer = $this->customer();
 
         $this->post(self::COPPERS.'/forgot-password', ['email' => $customer->email])
-            ->assertSessionHas('status', 'Si el correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña.');
+            ->assertSessionHas('status', 'Si el correo existe, te enviamos un enlace para restablecer tu contraseña.');
 
         Notification::assertSentTo($customer, CustomerResetPassword::class);
 
         // Mismo mensaje con un correo que no existe, y no se manda nada.
         Notification::fake();
         $this->post(self::COPPERS.'/forgot-password', ['email' => 'nadie@example.com'])
-            ->assertSessionHas('status', 'Si el correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña.');
+            ->assertSessionHas('status', 'Si el correo existe, te enviamos un enlace para restablecer tu contraseña.');
         Notification::assertNothingSent();
     }
 

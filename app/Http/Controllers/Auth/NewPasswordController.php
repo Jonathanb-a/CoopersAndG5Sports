@@ -36,6 +36,7 @@ class NewPasswordController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($customer) use ($request) {
                 // Se renueva el token de "Mantener sesión iniciada": las sesiones recordadas dejan de valer.
+                // Cambiar la contraseña también cierra las demás sesiones (ver AuthenticateCustomerSession).
                 $customer->forceFill(['password' => $request->password, 'remember_token' => Str::random(60)])->save();
 
                 event(new PasswordReset($customer));
@@ -46,6 +47,7 @@ class NewPasswordController extends Controller
             return to_route('login')->with('status', __($status));
         }
 
-        throw ValidationException::withMessages(['email' => [__($status)]]);
+        // Un correo que no existe y un enlace inválido o vencido dan el mismo aviso: no se revela si hay cuenta.
+        throw ValidationException::withMessages(['email' => [__('passwords.token')]]);
     }
 }

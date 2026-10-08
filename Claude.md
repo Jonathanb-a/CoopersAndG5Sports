@@ -227,3 +227,63 @@ Sensación: cancha y calle, energía, grafiti.
   número de pedido, fecha y dirección de la tienda.
 - Si pasa la fecha y el pedido en efectivo no se entregó, aplica el mismo aviso
   "Pedido en efectivo sin entregar" (campana y Telegram); no se cancela solo.
+
+
+## Uso del grafo y de las pruebas
+- Antes de explorar el código, consulta graphify-out/GRAPH_REPORT.md o usa
+  `graphify query` para ubicar archivos. Actualiza el grafo al terminar una
+  tarea grande. graphify-out/ no se sube a Git.
+- Mientras se prueba: corre solo los tests relacionados (--filter). La suite
+  completa y npm run build, al final de cada tarea grande o fase.
+- Las migraciones nuevas se crean, pero NO se corren: el dueño del proyecto
+  corre php artisan migrate en su MySQL.
+- Las tablas de arriba son una guía inicial; la fuente de verdad son las
+  migraciones y los modelos.
+
+## Aislamiento entre tiendas
+- Todo modelo con store_id usa el trait BelongsToStore (global scope).
+  Cualquier consulta que se salte el scope (withoutGlobalScopes, DB::table,
+  SQL crudo) debe justificarse y llevar prueba.
+- Un cliente o empleado de una tienda nunca ve ni toca datos de la otra,
+  aunque cambie un ID en la URL. products.cost solo lo ve el owner.
+
+## Avisos por Telegram al dueño (fase 5.21a)
+- Bot de Telegram vía HTTP client; no hay paquetes extra. Variables:
+  TELEGRAM_BOT_TOKEN y TELEGRAM_OWNER_CHAT_ID (en .env, nunca en el código ni
+  en logs; si falla se registra con el token como [token]).
+- Si faltan las variables, no se manda ni se encola nada. Un aviso fallido
+  nunca rompe un pedido, una cancelación ni un movimiento de stock.
+- Avisos: pedido nuevo (solo canal web, con forma de pago), solicitud de
+  cancelación, modelo agotado (todas las tallas en 0, una vez por
+  agotamiento) y pedido en efectivo sin entregar. La venta de mostrador no
+  avisa. Ningún mensaje lleva costos.
+
+## WhatsApp
+- Solo enlaces wa.me con mensaje prellenado (clase WhatsAppLink y
+  OrderWhatsAppMessage); sin API automática. El número sale de la tienda del
+  pedido. Sin número configurado no se muestra el botón.
+- El botón "Tengo una duda" está siempre visible en el detalle del pedido.
+
+## Recuperar contraseña de clientes (fase 5.22b)
+- Solo clientes (guard customer, broker "customers", tabla
+  customer_password_reset_tokens). El broker y el login del panel /admin no se
+  tocan; un token de uno no sirve en el otro.
+- Flujo: "¿Olvidaste tu contraseña?" en el login -> correo -> correo con enlace
+  -> contraseña nueva. Las páginas usan el tema de la tienda desde la que se pide.
+- El correo (CustomerResetPassword) sale en cola y fija la tienda al crearse
+  (dominio con esquema y puerto, nombre y tema), porque el trabajo en cola ya no
+  tiene la petición. El enlace abre el dominio de esa misma tienda; el HTML
+  usa los colores del tema (StoreMailTheme) y el logo de public/brand/{tema}/
+  logo.png si existe, o el nombre de la tienda. Local: MAIL_MAILER=log.
+- Siempre el mismo mensaje al pedir el enlace ("Si el correo existe, te
+  enviamos un enlace…"), exista o no la cuenta. Si el envío falla se registra
+  en el log y la pantalla responde igual.
+- Límites: 5 por minuto por correo+IP y 30 por hora por IP al pedir el enlace;
+  10 por minuto por IP al guardar la contraseña nueva. El enlace vence a los 60
+  minutos, es de un solo uso y uno nuevo anula el anterior.
+- Al restablecer o cambiar la contraseña se cierran las demás sesiones del
+  cliente (AuthenticateCustomerSession: huella de la contraseña en la sesión) y
+  se renueva el remember_token. Solo se quita el inicio de sesión: el carrito se
+  conserva. El AuthenticateSession de Laravel no sirve aquí: usa el guard del panel.
+- Cuentas de Google (sin contraseña) usan el mismo flujo para definir una; el
+  correo lo dice. El flujo no revela si la cuenta existe ni cómo se creó.

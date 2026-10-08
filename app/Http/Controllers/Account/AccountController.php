@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\AuthenticateCustomerSession;
 use App\Models\Address;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,6 +61,9 @@ class AccountController extends Controller
         ], [], ['current_password' => 'contraseña actual', 'password' => 'contraseña nueva']);
 
         $customer->update(['password' => $data['password']]);
+
+        // Las demás sesiones de este cliente se cierran; esta sigue con la contraseña nueva.
+        AuthenticateCustomerSession::remember($customer);
 
         return back()->with('status', 'Contraseña actualizada.');
     }

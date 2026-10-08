@@ -14,10 +14,11 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderConfirmationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreHomeController;
+use App\Http\Middleware\AuthenticateCustomerSession;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(ResolveStore::class)->group(function () {
+Route::middleware([ResolveStore::class, AuthenticateCustomerSession::class])->group(function () {
     Route::get('/', StoreHomeController::class)->name('home');
     Route::get('catalogo', CatalogController::class)->name('catalog');
     Route::get('categoria/{slug}', CatalogController::class)->name('category');
@@ -41,10 +42,10 @@ Route::middleware(ResolveStore::class)->group(function () {
         Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
         Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
-        Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+        Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->middleware('throttle:customer-password-link')->name('password.email');
 
         Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
-        Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.store');
+        Route::post('reset-password', [NewPasswordController::class, 'store'])->middleware('throttle:customer-password-reset')->name('password.store');
 
         Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('google.redirect');
         Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');

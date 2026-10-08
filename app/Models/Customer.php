@@ -40,7 +40,8 @@ class Customer extends Authenticatable
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new CustomerResetPassword($token));
+        // Sale en cola; la tienda de la que viene la petición se fija aquí, mientras todavía hay petición.
+        $this->notify(CustomerResetPassword::forCurrentStore($token));
     }
 
     public function addresses(): HasMany

@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\StoreGuard;
 use App\Support\TelegramMessage;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -36,6 +37,11 @@ class StockService
     ): StockMovement {
         if ($quantity === 0) {
             throw new InvalidArgumentException('La cantidad del movimiento no puede ser cero.');
+        }
+
+        // Un movimiento ligado a un pedido solo puede tocar piezas de la tienda de ese pedido.
+        if ($order !== null) {
+            StoreGuard::assertSameStore($variant, $order);
         }
 
         $movement = DB::transaction(function () use ($variant, $type, $quantity, $user, $notes, $order) {

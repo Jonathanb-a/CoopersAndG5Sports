@@ -501,7 +501,7 @@ class HomeDeliveryTest extends TestCase
             $this->refuses(fn () => $this->deliveries()->switchToPickup($order, $this->g5Staff)),
         ];
 
-        $this->assertSame(array_fill(0, 4, 'El pedido CP-00001 es de otra tienda.'), $messages);
+        $this->assertSame(array_fill(0, 4, 'No tienes acceso a este pedido.'), $messages);
 
         $order->refresh();
         $this->assertNull($order->delivery_scheduled_date);

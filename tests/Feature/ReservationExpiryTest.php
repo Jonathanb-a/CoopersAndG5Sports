@@ -173,6 +173,7 @@ class ReservationExpiryTest extends TestCase
 
         // Ya cancelado por el cliente (su stock ya regresó).
         $cancelled = $this->reserve([[$shirt, 1]], $luis, expiresInHours: -5);
+        $this->requestingStore($this->coppers);
         app(OrderCancellationService::class)->cancel($cancelled, $luis, 'Ya no lo quiero');
 
         // Vencido, pero el personal le dio más tiempo.
@@ -343,6 +344,7 @@ class ReservationExpiryTest extends TestCase
             ->where('cart.count', 2));
 
         // Al cancelar uno (o al pagarlo) vuelve a poder apartar.
+        $this->requestingStore($this->coppers);
         app(OrderCancellationService::class)->cancel($third, $this->ana);
         $this->get(self::COPPERS.'/checkout')->assertInertia(fn (Assert $page) => $page->where('reservationLimit', null));
         $this->actingAs($this->ana, 'customer')

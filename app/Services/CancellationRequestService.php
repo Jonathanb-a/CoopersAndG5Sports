@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\StoreGuard;
 use App\Support\TelegramMessage;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -48,6 +49,8 @@ class CancellationRequestService
             // Con el pedido bloqueado: un doble clic no deja dos solicitudes ni dos avisos.
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
 
+            StoreGuard::authorize($locked, $customer);
+
             if ($locked->cancellation_requested_at !== null && $locked->status === OrderStatus::Paid) {
                 throw new InvalidOrderTransitionException("El pedido {$locked->number} ya tiene una solicitud de cancelación en revisión.");
             }
@@ -79,6 +82,8 @@ class CancellationRequestService
 
         DB::transaction(function () use ($order, $user, $note) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $user);
 
             if ($locked->cancellation_requested_at === null) {
                 throw new InvalidOrderTransitionException("El pedido {$locked->number} no tiene una solicitud de cancelación.");

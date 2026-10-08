@@ -384,6 +384,7 @@ class SalesDashboardRulesTest extends TestCase
 
         $paid = $this->order('G5-00001', OrderStatus::Paid, 100, $yesterday);
         $requested = $this->order('G5-00002', OrderStatus::Paid, 100, $today);
+        $this->requestingStore($this->g5);
         app(CancellationRequestService::class)->request($requested, $this->ana, 'Ya no lo quiero');
         $localPaid = $this->order('G5-00003', OrderStatus::Paid, 100, $today, extra: ['delivery_method' => DeliveryMethod::Local]);
         $localShipped = $this->order('G5-00004', OrderStatus::Shipped, 100, $today, extra: ['delivery_method' => DeliveryMethod::Local]);
@@ -468,8 +469,10 @@ class SalesDashboardRulesTest extends TestCase
 
         // Solicitud de cancelación (y un segundo intento que se rechaza).
         app(OrderStatusService::class)->transition($order, OrderStatus::Paid, $this->owner);
+        $this->requestingStore($this->g5);
         app(CancellationRequestService::class)->request($order, $this->ana, 'Ya no lo quiero');
         try {
+            $this->requestingStore($this->g5);
             app(CancellationRequestService::class)->request($order, $this->ana, 'Otra vez');
         } catch (\Throwable) {
         }

@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\StoreGuard;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,6 +43,8 @@ class OrderCancellationService
             // Con el pedido bloqueado: si dos personas cancelan a la vez (o hay doble clic), la segunda
             // lo encuentra ya cancelado y no regresa el stock otra vez.
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
             $wasPaid = $locked->status === OrderStatus::Paid;
 
             if (! in_array($locked->status, [OrderStatus::Reserved, OrderStatus::Paid], true)) {
@@ -99,6 +102,8 @@ class OrderCancellationService
         DB::transaction(function () use ($order, $actor, $reason) {
             // Con el pedido bloqueado: un doble clic encuentra la venta ya anulada y no regresa el stock otra vez.
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
 
             if ($actor->role !== UserRole::Owner) {
                 throw new InvalidOrderTransitionException("Solo el dueño puede anular la venta {$locked->number}.");

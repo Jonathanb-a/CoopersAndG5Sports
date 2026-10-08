@@ -246,6 +246,17 @@ Sensación: cancha y calle, energía, grafiti.
   SQL crudo) debe justificarse y llevar prueba.
 - Un cliente o empleado de una tienda nunca ve ni toca datos de la otra,
   aunque cambie un ID en la URL. products.cost solo lo ve el owner.
+- Los servicios que escriben (OrderStatusService, OrderCancellationService,
+  OrderReservationService, CancellationRequestService, OrderDeliveryService)
+  bloquean el pedido sin el scope de tienda, así que validan con App\Support\StoreGuard
+  después del bloqueo: User (staff u owner) debe poder acceder a la tienda del pedido
+  (canAccessTenant); Customer debe ser el dueño del pedido y estar en la tienda de la
+  petición actual (ResolveStore); actor null = el sistema (comandos que recorren todas
+  las tiendas a propósito). Si falla lanza CrossStoreAccessException (subclase de
+  InvalidOrderTransitionException) con un mensaje que no revela el pedido.
+- StockService::change con un pedido exige que la variante y el pedido sean de la misma
+  tienda; sin pedido no cambia nada. Un servicio nuevo que bloquee pedidos con
+  withoutGlobalScopes debe llamar a StoreGuard::authorize.
 
 ## Avisos por Telegram al dueño (fase 5.21a)
 - Bot de Telegram vía HTTP client; no hay paquetes extra. Variables:

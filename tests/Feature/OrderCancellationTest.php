@@ -53,6 +53,7 @@ class OrderCancellationTest extends TestCase
         $this->owner = User::factory()->create(['role' => UserRole::Owner]);
         $this->staff = User::factory()->create(['role' => UserRole::Staff]);
         $this->staff->stores()->attach($this->g5->id);
+        $this->requestingStore($this->g5);
         $this->cancellations = app(OrderCancellationService::class);
         $this->reservations = app(OrderReservationService::class);
     }

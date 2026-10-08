@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\StoreGuard;
 use Illuminate\Support\Facades\DB;
 
 /** El apartado de un pedido después de creado: darle más tiempo para pagar y reactivarlo si venció. */
@@ -43,6 +44,8 @@ class OrderReservationService
 
         DB::transaction(function () use ($order, $hours, $actor) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
 
             if (! self::canExtend($locked)) {
                 throw new InvalidOrderTransitionException(
@@ -94,6 +97,8 @@ class OrderReservationService
     {
         DB::transaction(function () use ($order, $actor) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
 
             if (! OrderStatusService::canReactivate($locked)) {
                 throw new InvalidOrderTransitionException(

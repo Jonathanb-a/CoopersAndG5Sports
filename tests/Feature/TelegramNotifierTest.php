@@ -308,6 +308,7 @@ class TelegramNotifierTest extends TestCase
         $this->checkout($shirt)->assertSessionHasNoErrors();
         $second = Order::withoutGlobalScopes()->orderByDesc('id')->first();
         app(OrderStatusService::class)->transition($second, OrderStatus::Paid, $this->owner);
+        $this->requestingStore($this->coppers);
         app(CancellationRequestService::class)->request($second, $this->ana);
 
         $this->assertSame("Copper's · CP-00002 · Solicitud de cancelación\nCliente: Ana Pérez\nMotivo: no dio motivo", $this->sent()[3]);
@@ -379,6 +380,7 @@ class TelegramNotifierTest extends TestCase
         $this->checkout($shirt, 2)->assertSessionHasNoErrors();
         $order = Order::withoutGlobalScopes()->sole();
         app(OrderStatusService::class)->transition($order, OrderStatus::Paid, $this->owner);
+        $this->requestingStore($this->coppers);
         app(CancellationRequestService::class)->request($order, $this->ana, 'Ya no la quiero');
 
         $messages = $this->sent();

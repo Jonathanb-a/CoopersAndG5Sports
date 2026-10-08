@@ -9,6 +9,7 @@ use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\DeliveryAttempt;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\StoreGuard;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Support\Carbon;
@@ -196,9 +197,7 @@ class OrderDeliveryService
         DB::transaction(function () use ($order, $actor, $callback) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
 
-            if (! $actor->canAccessTenant($locked->store)) {
-                throw new InvalidOrderTransitionException("El pedido {$locked->number} es de otra tienda.");
-            }
+            StoreGuard::authorize($locked, $actor);
 
             $callback($locked);
         });

@@ -41,6 +41,7 @@ class OrderStatusServiceTest extends TestCase
         $this->coppers = Store::create(['name' => "Copper's", 'slug' => 'coppers', 'domain' => 'coppers.localhost', 'theme' => 'coppers', 'whatsapp_phone' => '7550000000']);
         $this->ana = Customer::factory()->create(['name' => 'Ana Pérez', 'phone' => '755 123 4567']);
         $this->staff = User::factory()->create(['name' => 'Laura Staff', 'role' => UserRole::Staff]);
+        $this->staff->stores()->attach($this->coppers);
         $this->service = app(OrderStatusService::class);
     }
 
@@ -184,6 +185,7 @@ class OrderStatusServiceTest extends TestCase
         $byCustomer = $this->order();
         $bySystem = $this->order();
 
+        $this->requestingStore($this->coppers);
         $this->service->transition($byCustomer, OrderStatus::Cancelled, $this->ana, 'Ya no lo quiero');
         $this->service->transition($bySystem, OrderStatus::Cancelled, null, 'Venció el apartado');
 

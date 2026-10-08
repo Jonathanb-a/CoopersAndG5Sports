@@ -359,7 +359,7 @@ class PickupScheduleTest extends TestCase
         $order = $this->place();
 
         $message = $this->refuses(fn () => $this->pickup($order, '2026-10-09', null, $this->g5Staff));
-        $this->assertSame('El pedido CP-00001 es de otra tienda.', $message);
+        $this->assertSame('No tienes acceso a este pedido.', $message);
         $this->assertNull($order->fresh()->delivery_scheduled_date);
         $this->assertCount(1, $order->statusHistories()->get());
 

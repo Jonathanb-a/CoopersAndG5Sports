@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\User;
+use App\Support\StoreGuard;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -40,6 +41,8 @@ class OrderStatusService
         DB::transaction(function () use ($order, $to, $actor, $note, $data) {
             // Con la fila bloqueada: dos personas no pueden mover el mismo pedido a la vez.
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
             $from = $locked->status;
 
             if (! $from->canTransitionTo($to)) {
@@ -75,6 +78,8 @@ class OrderStatusService
     /** Deja una anotación en el historial sin cambiar el estado (por ejemplo, que se dio más tiempo para pagar). */
     public function annotate(Order $order, User|Customer|null $actor, string $note): OrderStatusHistory
     {
+        StoreGuard::authorize($order, $actor);
+
         return $this->record($order, $order->status, $order->status, $actor, trim($note));
     }
 
@@ -89,6 +94,8 @@ class OrderStatusService
     {
         DB::transaction(function () use ($order, $actor, $note) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
 
             if (! self::canReactivate($locked)) {
                 throw new InvalidOrderTransitionException(
@@ -122,6 +129,8 @@ class OrderStatusService
     {
         DB::transaction(function () use ($order, $actor, $reason) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
+
+            StoreGuard::authorize($locked, $actor);
 
             if (! self::canVoid($locked)) {
                 throw new InvalidOrderTransitionException(

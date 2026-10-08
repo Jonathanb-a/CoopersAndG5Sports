@@ -582,6 +582,7 @@ class MyOrdersTest extends TestCase
     public function test_the_panel_shows_the_request_with_its_note_and_the_staff_can_reject_it()
     {
         $order = $this->order($this->coppers, $this->ana, 'CP-00001', OrderStatus::Paid);
+        $this->requestingStore($this->coppers);
         app(CancellationRequestService::class)->request($order, $this->ana, 'Ya no lo necesito');
         $this->panelAs($this->coppersStaff, $this->coppers);
 
@@ -619,6 +620,7 @@ class MyOrdersTest extends TestCase
     {
         $variant = $this->variant($this->coppers, 'Camisa', 3);
         $order = $this->order($this->coppers, $this->ana, 'CP-00001', OrderStatus::Paid, [[$variant, 2]]);
+        $this->requestingStore($this->coppers);
         app(CancellationRequestService::class)->request($order, $this->ana, 'Ya no lo necesito');
         $this->panelAs($this->owner, $this->coppers);
 

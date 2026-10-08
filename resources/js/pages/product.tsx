@@ -1,5 +1,6 @@
 import { AddToCartLabel } from '@/components/store/add-to-cart-label';
 import { StoreButton } from '@/components/store/button';
+import { ProductBuyBar } from '@/components/store/buy-bar';
 import { Container } from '@/components/store/container';
 import { MiniCartPanel } from '@/components/store/mini-cart';
 import { ProductCard } from '@/components/store/product-card';
@@ -8,12 +9,13 @@ import { Reveal, ScrollReveal } from '@/components/store/reveal';
 import { SectionHeading } from '@/components/store/section-heading';
 import { SizeSelector } from '@/components/store/size-selector';
 import { formatMoney, whatsappUrl } from '@/lib/store';
+import { cn } from '@/lib/utils';
 import StoreLayout from '@/Themes';
 import { useTheme } from '@/Themes/context';
 import { type ProductDetail, type SharedData, type StoreProduct } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ProductPageProps {
     product: ProductDetail;
@@ -86,6 +88,15 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
     };
     const soldOut = product.sizes.length > 0 && selectable.length === 0;
 
+    // La barra de celular, sin talla elegida, trae aquí al cliente: al selector de tallas, con el foco en la primera elegible.
+    const sizesRef = useRef<HTMLDivElement>(null);
+    const goToSizes = () => {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        sizesRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+        sizesRef.current?.querySelector<HTMLInputElement>('input[type="radio"]:not(:disabled)')?.focus({ preventScroll: true });
+    };
+
     // Mensaje para WhatsApp: producto, talla elegida y enlace.
     const message = [
         `Hola, me interesa ${product.brand ? `${product.brand} ` : ''}${product.name}${product.color ? ` (${product.color})` : ''}`,
@@ -151,7 +162,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                             </div>
                         )}
 
-                        <div className="border-store-border mt-8 border-t pt-6">
+                        <div ref={sizesRef} className="border-store-border mt-8 scroll-mt-24 border-t pt-6">
                             {product.sizes.length > 0 ? (
                                 <SizeSelector
                                     sizes={product.sizes}
@@ -185,12 +196,20 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                                         onClick={addToCart}
                                         disabled={soldOut || adding}
                                         aria-describedby={addError ? 'carrito-error' : undefined}
-                                        className="w-full"
+                                        // En celular el botón vive en la barra fija de abajo (ProductBuyBar).
+                                        className={cn('w-full', product.sizes.length > 0 && 'max-md:hidden')}
                                     >
                                         <AddToCartLabel soldOut={soldOut} adding={adding} added={added} />
                                     </StoreButton>
                                     {addError && (
-                                        <p id="carrito-error" role="alert" className="text-store-error mt-2 text-center text-sm font-medium">
+                                        <p
+                                            id="carrito-error"
+                                            role="alert"
+                                            className={cn(
+                                                'text-store-error mt-2 text-center text-sm font-medium',
+                                                product.sizes.length > 0 && 'max-md:hidden',
+                                            )}
+                                        >
                                             {addError}
                                         </p>
                                     )}
@@ -237,6 +256,16 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                     </div>
                 </Container>
             )}
+            <ProductBuyBar
+                price={product.price}
+                sizes={product.sizes}
+                chosen={chosen}
+                adding={adding}
+                added={added}
+                onAdd={addToCart}
+                onChooseSize={goToSizes}
+                error={addError}
+            />
             <MiniCartPanel open={panelOpen} onOpenChange={setPanelOpen} />
         </>
     );

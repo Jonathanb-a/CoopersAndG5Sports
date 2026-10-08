@@ -1,4 +1,5 @@
 import { buttonVariants, StoreButton } from '@/components/store/button';
+import { CartBuyBar } from '@/components/store/buy-bar';
 import { Container } from '@/components/store/container';
 import { Field, FormStatus } from '@/components/store/form';
 import { Reveal } from '@/components/store/reveal';
@@ -93,7 +94,10 @@ function CartContent({ cart, notices, status }: CartProps) {
                         </ul>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                            <Link href="/catalogo" className="text-store-link inline-flex min-h-11 items-center font-medium underline underline-offset-4">
+                            <Link
+                                href="/catalogo"
+                                className="text-store-link inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                            >
                                 Seguir comprando
                             </Link>
                             {confirmingClear ? (
@@ -143,12 +147,15 @@ function CartContent({ cart, notices, status }: CartProps) {
                         </dl>
                         <p className="text-store-muted mt-2 text-xs">El envío se calcula en el siguiente paso.</p>
 
-                        <Link href="/checkout" className={cn(buttonVariants({ size: 'lg' }), 'mt-6 w-full')}>
+                        {/* En celular este botón vive en la barra fija de abajo (CartBuyBar). */}
+                        <Link href="/checkout" className={cn(buttonVariants({ size: 'lg' }), 'mt-6 w-full max-md:hidden')}>
                             Continuar con la compra
                         </Link>
                     </aside>
                 </div>
             )}
+
+            <CartBuyBar count={cart.lines.length} total={cart.total} />
         </Container>
     );
 }

@@ -239,6 +239,12 @@ Sensación: cancha y calle, energía, grafiti.
   corre php artisan migrate en su MySQL.
 - Las tablas de arriba son una guía inicial; la fuente de verdad son las
   migraciones y los modelos.
+- NUNCA cierres procesos con taskkill por nombre ni mates todos los node.exe (ni
+  php.exe): eso tumba el servidor de desarrollo del dueño. Si hay que detener
+  algo, solo por el PID del proceso que tú iniciaste (guárdalo al arrancarlo).
+- Los servidores y las bases temporales de revisión (SQLite, capturas, scripts)
+  se crean fuera del repositorio y se borran al terminar. El servidor del dueño
+  (puerto 8000) y su MySQL no se usan para pruebas.
 
 ## Aislamiento entre tiendas
 - Todo modelo con store_id usa el trait BelongsToStore (global scope).
@@ -392,3 +398,18 @@ Sensación: cancha y calle, energía, grafiti.
   interno, no en el elemento con store-lift. No animar filtros ni backdrop-blur (el
   encabezado de Copper's ya no lleva blur porque se mueve).
 - La revisión usa una base SQLite temporal y capturas fuera del repositorio.
+- Barra de compra en celular (fase 6.3b, BuyBar): por debajo del ancho de tableta
+  (md:hidden), producto y carrito llevan una barra inferior con el monto y el
+  botón principal, igual en estilo a la del checkout y con el área segura de iOS.
+  Es sticky, no fixed: ocupa su lugar al final del contenido, así que no tapa el
+  pie ni necesita espacio extra, y queda debajo del encabezado y del cajón (z-20).
+  En celular el botón normal de la página se oculta (max-md:hidden); en pantalla
+  grande no cambia nada.
+  - Producto: precio y "Agregar al carrito". Sin talla elegida dice "Elige tu
+    talla" y lleva al selector (con el foco en la primera talla elegible) en vez
+    de agregar; agotado va deshabilitado; sobre pedido conserva el texto y lo
+    avisa sobre el precio; los errores salen en la misma barra. Sin tallas
+    registradas no hay barra.
+  - Carrito: total estimado y "Continuar con la compra". Vacío, no se muestra.
+  - Solo anima su entrada (opacity y transform, valores del tema); nada con
+    prefers-reduced-motion ni en el carrito, que es ruta sin animaciones.

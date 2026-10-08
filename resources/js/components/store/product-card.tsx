@@ -43,6 +43,8 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
                             alt={name}
                             loading="lazy"
                             data-photo="main"
+                            width={600}
+                            height={600}
                             className={cn(
                                 'absolute inset-0 m-auto max-h-full max-w-full object-contain',
                                 hover && 'will-change-transform group-hover/card:scale-(--card-zoom)',
@@ -64,6 +66,8 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
                                 loading="lazy"
                                 aria-hidden="true"
                                 data-photo="second"
+                                width={600}
+                                height={600}
                                 className="absolute inset-0 m-auto max-h-full max-w-full object-contain opacity-0 group-hover/card:opacity-100"
                                 style={cssTransition(hover, hover.card.duration, 'opacity')}
                             />
@@ -97,7 +101,7 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
     return (
         <article
             className={cn(
-                'group/card store-surface store-transition store-lift flex h-full flex-col overflow-hidden',
+                'group/card store-surface store-transition store-lift flex h-full flex-col',
                 tilt !== undefined && 'group-hover/card:rotate-(--card-tilt)',
                 lift !== undefined && 'group-hover/card:-translate-y-(--card-lift)',
                 className,
@@ -113,16 +117,19 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
                     : undefined
             }
         >
-            {href ? (
-                <Link
-                    href={href}
-                    className="focus-visible:outline-store-accent flex flex-1 flex-col focus-visible:outline-2 focus-visible:-outline-offset-2"
-                >
-                    {body}
-                </Link>
-            ) : (
-                body
-            )}
+            {/* El recorte (overflow-hidden) va aquí adentro: la sombra de store-lift vive fuera de la tarjeta. */}
+            <div className="flex flex-1 flex-col overflow-hidden rounded-[inherit]">
+                {href ? (
+                    <Link
+                        href={href}
+                        className="focus-visible:outline-store-accent flex flex-1 flex-col focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    >
+                        {body}
+                    </Link>
+                ) : (
+                    body
+                )}
+            </div>
         </article>
     );
 }

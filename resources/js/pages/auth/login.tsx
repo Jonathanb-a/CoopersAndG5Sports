@@ -73,7 +73,10 @@ export default function Login({ status }: { status?: string }) {
                             />
                             Mantener sesión iniciada
                         </label>
-                        <Link href="/forgot-password" className="text-store-link font-medium underline underline-offset-4">
+                        <Link
+                            href="/forgot-password"
+                            className="text-store-link inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                        >
                             ¿Olvidaste tu contraseña?
                         </Link>
                     </div>

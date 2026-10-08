@@ -76,6 +76,8 @@ export function ProductGallery({ images, name, className }: ProductGalleryProps)
                                 alt={position === 0 ? name : `${name}, foto ${position + 1}`}
                                 draggable={false}
                                 loading={position === 0 ? 'eager' : 'lazy'}
+                                width={800}
+                                height={800}
                                 className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
                             />
                         </div>
@@ -126,7 +128,14 @@ export function ProductGallery({ images, name, className }: ProductGalleryProps)
                                     position === index ? 'border-store-accent' : 'border-store-border opacity-70 hover:opacity-100',
                                 )}
                             >
-                                <img src={src} alt="" loading="lazy" className="absolute inset-0 m-auto max-h-full max-w-full object-contain" />
+                                <img
+                                    src={src}
+                                    alt=""
+                                    width={96}
+                                    height={96}
+                                    loading="lazy"
+                                    className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+                                />
                             </button>
                         </li>
                     ))}

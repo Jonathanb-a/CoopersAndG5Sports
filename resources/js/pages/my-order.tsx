@@ -123,7 +123,7 @@ function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, b
             <div className="mt-6 space-y-3" aria-live="polite">
                 <FormStatus>{status}</FormStatus>
                 {errors.order && (
-                    <p role="alert" className="rounded-store border border-red-600 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
+                    <p role="alert" className="rounded-store border-store-error text-store-error border px-4 py-3 text-sm font-medium">
                         {errors.order}
                     </p>
                 )}
@@ -239,6 +239,8 @@ function MyOrderContent({ order, can, delivery, pickup, cancellationRequested, b
                                             src={item.image_url}
                                             alt=""
                                             loading="lazy"
+                                            width={96}
+                                            height={96}
                                             className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
                                         />
                                     ) : (

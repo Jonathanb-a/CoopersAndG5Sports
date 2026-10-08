@@ -140,6 +140,8 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                                             <img
                                                 src={line.image_url}
                                                 alt=""
+                                                width={96}
+                                                height={96}
                                                 className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
                                             />
                                         ) : (
@@ -210,7 +212,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                                 ))}
                             </div>
                             {errors.delivery_method && (
-                                <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                                <p role="alert" className="text-store-error mt-2 text-sm font-medium">
                                     {errors.delivery_method}
                                 </p>
                             )}
@@ -237,7 +239,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                                     />
                                     <Field label="Referencias" hint="Color de la casa, entre qué calles… (opcional)" {...localField('references')} />
                                     {errors.local && (
-                                        <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
+                                        <p role="alert" className="text-store-error text-sm font-medium">
                                             {errors.local}
                                         </p>
                                     )}
@@ -272,7 +274,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                                 ))}
                             </div>
                             {errors.payment_method && (
-                                <p role="alert" className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                                <p role="alert" className="text-store-error mt-2 text-sm font-medium">
                                     {errors.payment_method}
                                 </p>
                             )}
@@ -345,15 +347,21 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                     </dl>
 
                     {reservationLimit && (
-                        <div role="alert" className="rounded-store mt-6 border border-red-600 px-4 py-3 text-sm">
-                            <p className="font-medium text-red-600 dark:text-red-400">{reservationLimit}</p>
+                        <div role="alert" className="rounded-store border-store-error mt-6 border px-4 py-3 text-sm">
+                            <p className="text-store-error font-medium">{reservationLimit}</p>
                             <Link href="/mi-cuenta/pedidos" className="text-store-link mt-2 inline-block font-medium underline underline-offset-4">
                                 Ver mis pedidos
                             </Link>
                         </div>
                     )}
 
-                    <StoreButton type="submit" size="lg" className="mt-6 w-full" disabled={form.processing || reservationLimit !== null}>
+                    {/* En celular el botón vive en la barra fija de abajo (siempre alcanzable); aquí solo en pantallas grandes. */}
+                    <StoreButton
+                        type="submit"
+                        size="lg"
+                        className="mt-6 w-full max-lg:hidden"
+                        disabled={form.processing || reservationLimit !== null}
+                    >
                         {form.processing ? 'Apartando…' : 'Apartar pedido'}
                     </StoreButton>
                     <p className="text-store-muted mt-3 text-xs leading-relaxed">
@@ -362,11 +370,25 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                             : `Pagas por transferencia. Apartamos tus piezas durante ${reserveHours} horas; al confirmar verás los datos para pagar.`}
                     </p>
                     {form.hasErrors && (
-                        <p role="alert" className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">
+                        <p role="alert" className="text-store-error mt-3 text-sm font-medium">
                             Revisa los datos marcados antes de continuar.
                         </p>
                     )}
                 </aside>
+
+                {/* Barra fija solo en celular: el total y el botón de apartar siempre a la vista y al alcance del pulgar. */}
+                <div
+                    data-checkout-bar=""
+                    className="bg-store-surface border-store-border sticky bottom-0 z-20 -mx-4 flex items-center gap-4 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:hidden"
+                >
+                    <div className="shrink-0">
+                        <p className="text-store-muted text-xs">Total</p>
+                        <p className="text-lg leading-tight font-bold">{formatMoney(total)}</p>
+                    </div>
+                    <StoreButton type="submit" size="lg" className="min-w-0 flex-1" disabled={form.processing || reservationLimit !== null}>
+                        {form.processing ? 'Apartando…' : 'Apartar pedido'}
+                    </StoreButton>
+                </div>
             </form>
         </Container>
     );

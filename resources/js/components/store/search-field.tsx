@@ -36,9 +36,13 @@ export function SearchField({ className }: SearchFieldProps) {
                 onChange={(event) => setTerm(event.target.value)}
                 maxLength={100}
                 placeholder="Buscar productos"
-                className="font-store-body text-store-text placeholder:text-store-muted h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
+                className="font-store-body text-store-text placeholder:text-store-muted h-11 min-w-0 flex-1 bg-transparent text-base outline-none"
             />
-            <button type="submit" aria-label="Buscar" className="text-store-muted hover:text-store-text">
+            <button
+                type="submit"
+                aria-label="Buscar"
+                className="text-store-muted hover:text-store-text -mr-3 inline-flex size-11 shrink-0 items-center justify-center"
+            >
                 <Search className="size-4" />
             </button>
         </form>

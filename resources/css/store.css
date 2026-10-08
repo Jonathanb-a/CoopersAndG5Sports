@@ -17,6 +17,7 @@
     --color-store-action-hover: var(--store-action-hover);
     --color-store-action-text: var(--store-action-contrast);
     --color-store-link: var(--store-link);
+    --color-store-error: var(--store-error);
 
     --color-store-tag-soldout: var(--store-tag-soldout);
     --color-store-tag-soldout-text: var(--store-tag-soldout-text);
@@ -50,7 +51,7 @@
 }
 
 @utility store-transition {
-    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-property: color, background-color, border-color, transform, opacity;
     transition-duration: var(--store-duration);
     transition-timing-function: var(--store-ease);
 }
@@ -60,15 +61,55 @@
     transform: var(--store-tag-transform);
 }
 
-/* Movimiento al pasar el cursor / enfocar (la tarjeta y el botón lo toman del tema). */
-@utility store-lift {
-    &:hover,
-    &:focus-visible {
-        transform: var(--store-hover-transform);
-        box-shadow: var(--store-hover-shadow);
-    }
+/*
+ * Movimiento al pasar el cursor / enfocar (la tarjeta y el botón lo toman del tema).
+ * La sombra NO se anima (animar box-shadow repinta en cada cuadro): vive en dos capas fijas, la base
+ * (::before) y la de hover (::after), y al pasar el cursor solo cambian de opacidad mientras el
+ * elemento se mueve con transform. El aspecto es el mismo. Está fuera de @utility a propósito: así
+ * gana sobre el box-shadow de store-surface y de las clases shadow-*. Los elementos con
+ * overflow-hidden no deben llevar store-lift directamente (recortaría la sombra): su contenido va
+ * en un contenedor interno con overflow-hidden.
+ */
+.store-lift {
+    position: relative;
+    isolation: isolate;
+    box-shadow: none;
 }
 
+.store-lift::before,
+.store-lift::after {
+    content: '';
+    position: absolute;
+    inset: calc(var(--store-border-width, 0px) * -1);
+    z-index: -1;
+    border-radius: var(--store-radius);
+    pointer-events: none;
+    transition: opacity var(--store-duration) var(--store-ease);
+}
+
+.store-lift::before {
+    box-shadow: var(--store-shadow);
+}
+
+.store-lift::after {
+    box-shadow: var(--store-hover-shadow);
+    opacity: 0;
+}
+
+.store-lift:hover,
+.store-lift:focus-visible {
+    transform: var(--store-hover-transform);
+}
+
+.store-lift:hover::before,
+.store-lift:focus-visible::before {
+    opacity: 0;
+}
+
+.store-lift:hover::after,
+.store-lift:focus-visible::after {
+    opacity: 1;
+}
 @media (prefers-reduced-motion: reduce) {
     [data-theme] *,
     [data-theme] *::before,

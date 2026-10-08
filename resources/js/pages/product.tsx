@@ -103,7 +103,10 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                 <nav aria-label="Ruta" className="text-store-muted text-sm">
                     <ol className="flex flex-wrap items-center gap-x-2">
                         <li>
-                            <Link href="/catalogo" className="hover:text-store-text underline-offset-4 hover:underline">
+                            <Link
+                                href="/catalogo"
+                                className="hover:text-store-text inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+                            >
                                 Catálogo
                             </Link>
                         </li>
@@ -112,7 +115,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                                 <span aria-hidden="true">/</span>
                                 <Link
                                     href={`/categoria/${product.category.slug}`}
-                                    className="hover:text-store-text underline-offset-4 hover:underline"
+                                    className="hover:text-store-text inline-flex min-h-11 items-center underline-offset-4 hover:underline"
                                 >
                                     {product.category.name}
                                 </Link>
@@ -187,11 +190,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                                         <AddToCartLabel soldOut={soldOut} adding={adding} added={added} />
                                     </StoreButton>
                                     {addError && (
-                                        <p
-                                            id="carrito-error"
-                                            role="alert"
-                                            className="mt-2 text-center text-sm font-medium text-red-600 dark:text-red-400"
-                                        >
+                                        <p id="carrito-error" role="alert" className="text-store-error mt-2 text-center text-sm font-medium">
                                             {addError}
                                         </p>
                                     )}

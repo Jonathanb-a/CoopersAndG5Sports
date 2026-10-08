@@ -17,6 +17,8 @@
     --store-action-hover: #ffd600;
     --store-action-contrast: #0e0e10;
     --store-link: #35f0ee;
+    /* Mensajes de error: rojo claro con contraste AA sobre el fondo oscuro (7.5:1). */
+    --store-error: #ff7a7a;
 
     --store-purple: #a32ce0;
     --store-yellow: #ffd600;

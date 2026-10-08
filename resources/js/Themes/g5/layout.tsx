@@ -65,7 +65,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                                 <Menu className="size-7" />
                             </button>
 
-                            <Link href="/" aria-label={`${store.name}, inicio`} className="mr-auto lg:mr-0">
+                            <Link href="/" aria-label={`${store.name}, inicio`} className="mr-auto inline-flex min-h-11 items-center lg:mr-0">
                                 <StoreLogo theme={store.theme} name={store.name} textClassName="text-2xl text-store-accent lg:text-4xl" />
                             </Link>
 
@@ -113,7 +113,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                         </nav>
                         <WhatsAppLink
                             url={store.whatsapp_url}
-                            className="text-store-link mt-6 inline-flex items-center gap-2 font-bold underline-offset-4 hover:underline"
+                            className="text-store-link mt-6 inline-flex min-h-11 items-center gap-2 font-bold underline-offset-4 hover:underline"
                         />
                     </MobileMenu>
 

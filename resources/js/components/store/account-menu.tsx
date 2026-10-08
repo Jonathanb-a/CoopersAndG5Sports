@@ -5,7 +5,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { User } from 'lucide-react';
 
 const trigger =
-    'rounded-store text-store-text hover:text-store-link focus-visible:outline-store-accent inline-flex h-10 min-w-10 items-center justify-center gap-2 px-2 text-sm font-semibold focus-visible:outline-2 sm:h-11 sm:min-w-11';
+    'rounded-store text-store-text hover:text-store-link focus-visible:outline-store-accent inline-flex h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm font-semibold focus-visible:outline-2';
 
 const item =
     'text-store-text data-[highlighted]:bg-store-bg data-[highlighted]:text-store-link flex min-h-11 cursor-pointer items-center px-4 text-sm outline-none';

@@ -51,11 +51,8 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                         Saltar al contenido
                     </a>
 
-                    <RetractingHeader
-                        className="border-store-border bg-store-bg/95 sticky top-0 z-30 border-b backdrop-blur"
-                        pinned={searchOpen || menuOpen}
-                    >
-                        <Container className="grid h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4 lg:h-24">
+                    <RetractingHeader className="border-store-border bg-store-bg/95 sticky top-0 z-30 border-b" pinned={searchOpen || menuOpen}>
+                        <Container className="grid h-16 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 lg:h-24">
                             <div className="flex items-center">
                                 <button
                                     type="button"
@@ -68,7 +65,11 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                                 <SearchField className="hidden w-64 lg:flex" />
                             </div>
 
-                            <Link href="/" aria-label={`${store.name}, inicio`} className="text-center">
+                            <Link
+                                href="/"
+                                aria-label={`${store.name}, inicio`}
+                                className="inline-flex min-h-11 items-center justify-center text-center"
+                            >
                                 <StoreLogo theme={store.theme} name={store.name} textClassName="text-2xl lg:text-4xl" />
                             </Link>
 
@@ -118,7 +119,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                         </nav>
                         <WhatsAppLink
                             url={store.whatsapp_url}
-                            className="text-store-link mt-6 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
+                            className="text-store-link mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
                         />
                     </MobileMenu>
 
@@ -136,7 +137,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                                 <p className="text-store-muted text-xs font-medium tracking-[0.18em] uppercase">Contacto</p>
                                 <WhatsAppLink
                                     url={store.whatsapp_url}
-                                    className="text-store-link mt-3 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
+                                    className="text-store-link mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
                                 />
                             </div>
                         </Container>

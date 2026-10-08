@@ -19,6 +19,8 @@
     --store-action-hover: #7f4518;
     --store-action-contrast: #ffffff;
     --store-link: #9c5620;
+    /* Mensajes de error: rojo sobrio con contraste AA (6.1:1 sobre el fondo, 7:1 sobre blanco). */
+    --store-error: #b42318;
 
     /* Etiquetas chicas: el rosa #F08A8A solo aquí. */
     --store-tag-soldout: #1c1c1c;

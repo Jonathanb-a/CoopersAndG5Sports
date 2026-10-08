@@ -29,7 +29,13 @@ export function MiniCartPanel({ open, onOpenChange }: MiniCartPanelProps) {
                             <li key={line.variant_id} className="flex gap-3 py-3">
                                 <div className="bg-store-photo rounded-store relative size-16 shrink-0 overflow-hidden">
                                     {line.image_url ? (
-                                        <img src={line.image_url} alt="" className="absolute inset-0 m-auto max-h-full max-w-full object-contain" />
+                                        <img
+                                            src={line.image_url}
+                                            alt=""
+                                            width={96}
+                                            height={96}
+                                            className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+                                        />
                                     ) : (
                                         <span
                                             className="store-heading text-store-muted absolute inset-0 flex items-center justify-center text-2xl"

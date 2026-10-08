@@ -367,3 +367,28 @@ Sensación: cancha y calle, energía, grafiti.
 - Pruebas del frontend: vitest (npm test, resources/js/**/*.test.tsx), por tema:
   rangos de los valores, movimiento reducido, celular, rutas de pagar, el otro tema
   sin cambios y el render del layout completo.
+
+## Reglas para celular (fase 6.3)
+- Revisión hecha con Playwright en 360, 390, 414 y 768 px sobre las dos tiendas
+  (home, catálogo, categoría, producto, carrito, checkout, gracias, login,
+  registro, recuperar contraseña, Mis pedidos y su detalle, Mi cuenta): sin scroll
+  horizontal en ninguna. Repetir la revisión cuando se cambie el layout.
+- Tamaño táctil: todo botón, enlace suelto, talla u opción mide al menos 44 x 44 px
+  (size-11 / h-11 / min-h-11) con separación entre ellos. StoreButton `sm` también
+  es h-11. Los enlaces dentro de un párrafo están exentos.
+- Campos de formulario (input, select, textarea): texto de 16 px (text-base) para
+  que iOS no haga zoom, alto h-11, y el teclado correcto (type="email", "tel",
+  inputMode, autoComplete). Un campo suelto sin text-base rompe mobile.test.tsx.
+- Contraste AA: los mensajes de error usan text-store-error / border-store-error
+  (variable --store-error de cada tema), nunca un rojo fijo.
+- Checkout: en celular el total y el botón "Apartar pedido" van en una barra fija
+  inferior (data-checkout-bar, con safe-area); el botón de la columna del total
+  solo se ve en pantallas grandes.
+- Imágenes con width y height definidos; las fotos van dentro de cajas con
+  aspect-ratio (no hay saltos de layout). Los banners dependen de la caja.
+- Sombras: store-lift NO anima box-shadow. La sombra base (::before) y la de hover
+  (::after) son capas fijas que cambian solo de opacidad, y la tarjeta se mueve con
+  transform. Por eso el overflow-hidden de las tarjetas va en un contenedor
+  interno, no en el elemento con store-lift. No animar filtros ni backdrop-blur (el
+  encabezado de Copper's ya no lleva blur porque se mueve).
+- La revisión usa una base SQLite temporal y capturas fuera del repositorio.

@@ -122,7 +122,7 @@ function CatalogContent({ category, products, pagination, filters, options }: Ca
                                 id={sortId}
                                 value={filters.orden}
                                 onChange={(event) => change({ orden: event.target.value })}
-                                className="rounded-store border-store-border bg-store-surface text-store-text focus-visible:outline-store-accent h-11 border-[length:var(--store-border-width)] px-3 text-sm focus-visible:outline-2"
+                                className="rounded-store border-store-border bg-store-surface text-store-text focus-visible:outline-store-accent h-11 border-[length:var(--store-border-width)] px-3 text-base focus-visible:outline-2"
                             >
                                 {SORT_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>

@@ -26,13 +26,13 @@ export function Field({ label, error, hint, className, wrapperClassName, ...prop
                 className={cn(
                     'rounded-store font-store-body bg-store-surface text-store-text placeholder:text-store-muted h-11 w-full border-[length:var(--store-border-width)] px-3 text-base',
                     'focus-visible:outline-store-accent read-only:bg-store-bg read-only:text-store-muted focus-visible:outline-2 focus-visible:outline-offset-1',
-                    error ? 'border-red-600' : 'border-store-border',
+                    error ? 'border-store-error' : 'border-store-border',
                     className,
                 )}
                 {...props}
             />
             {(error || hint) && (
-                <p id={messageId} className={cn('mt-1.5 text-sm', error ? 'font-medium text-red-600 dark:text-red-400' : 'text-store-muted')}>
+                <p id={messageId} className={cn('mt-1.5 text-sm', error ? 'text-store-error font-medium' : 'text-store-muted')}>
                     {error ?? hint}
                 </p>
             )}
@@ -60,7 +60,7 @@ export function FormAlert({ children, className }: { children?: ReactNode; class
     }
 
     return (
-        <p role="alert" className={cn('rounded-store border border-red-600 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400', className)}>
+        <p role="alert" className={cn('rounded-store border-store-error text-store-error border px-4 py-3 text-sm font-medium', className)}>
             {children}
         </p>
     );
@@ -91,13 +91,13 @@ export function TextAreaField({ label, error, hint, className, wrapperClassName,
                 className={cn(
                     'rounded-store font-store-body bg-store-surface text-store-text placeholder:text-store-muted w-full border-[length:var(--store-border-width)] px-3 py-2 text-base',
                     'focus-visible:outline-store-accent focus-visible:outline-2 focus-visible:outline-offset-1',
-                    error ? 'border-red-600' : 'border-store-border',
+                    error ? 'border-store-error' : 'border-store-border',
                     className,
                 )}
                 {...props}
             />
             {(error || hint) && (
-                <p id={messageId} className={cn('mt-1.5 text-sm', error ? 'font-medium text-red-600 dark:text-red-400' : 'text-store-muted')}>
+                <p id={messageId} className={cn('mt-1.5 text-sm', error ? 'text-store-error font-medium' : 'text-store-muted')}>
                     {error ?? hint}
                 </p>
             )}

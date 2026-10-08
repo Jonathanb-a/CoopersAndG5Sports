@@ -67,7 +67,7 @@ function CartContent({ cart, notices, status }: CartProps) {
                     </div>
                 )}
                 {errors.cart && (
-                    <p role="alert" className="rounded-store border border-red-600 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
+                    <p role="alert" className="rounded-store border-store-error text-store-error border px-4 py-3 text-sm font-medium">
                         {errors.cart}
                     </p>
                 )}
@@ -93,7 +93,7 @@ function CartContent({ cart, notices, status }: CartProps) {
                         </ul>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                            <Link href="/catalogo" className="text-store-link font-medium underline underline-offset-4">
+                            <Link href="/catalogo" className="text-store-link inline-flex min-h-11 items-center font-medium underline underline-offset-4">
                                 Seguir comprando
                             </Link>
                             {confirmingClear ? (
@@ -113,7 +113,7 @@ function CartContent({ cart, notices, status }: CartProps) {
                                 <button
                                     type="button"
                                     onClick={() => setConfirmingClear(true)}
-                                    className="text-store-muted hover:text-store-text underline underline-offset-4"
+                                    className="text-store-muted hover:text-store-text inline-flex min-h-11 items-center underline underline-offset-4"
                                 >
                                     Vaciar carrito
                                 </button>
@@ -168,7 +168,13 @@ function CartLineItem({ line }: { line: CartLine }) {
                 aria-label={`Ver ${line.name}`}
             >
                 {line.image_url ? (
-                    <img src={line.image_url} alt="" className="absolute inset-0 m-auto max-h-full max-w-full object-contain" />
+                    <img
+                        src={line.image_url}
+                        alt=""
+                        width={96}
+                        height={96}
+                        className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+                    />
                 ) : (
                     <span className="store-heading text-store-muted absolute inset-0 flex items-center justify-center text-4xl" aria-hidden="true">
                         {line.name.charAt(0)}
@@ -212,7 +218,7 @@ function CartLineItem({ line }: { line: CartLine }) {
                             id={selectId}
                             value={line.quantity}
                             onChange={(event) => changeQuantity(Number(event.target.value))}
-                            className="rounded-store border-store-border bg-store-surface text-store-text focus-visible:outline-store-accent h-11 border-[length:var(--store-border-width)] px-3 text-sm focus-visible:outline-2"
+                            className="rounded-store border-store-border bg-store-surface text-store-text focus-visible:outline-store-accent h-11 border-[length:var(--store-border-width)] px-3 text-base focus-visible:outline-2"
                         >
                             {options.map((quantity) => (
                                 <option key={quantity} value={quantity}>
@@ -224,7 +230,7 @@ function CartLineItem({ line }: { line: CartLine }) {
                     <button
                         type="button"
                         onClick={() => router.delete(`/carrito/${line.variant_id}`, { preserveScroll: true })}
-                        className="text-store-link focus-visible:outline-store-accent min-h-11 text-sm font-medium underline underline-offset-4 focus-visible:outline-2"
+                        className="text-store-link focus-visible:outline-store-accent inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-medium underline underline-offset-4 focus-visible:outline-2"
                         aria-label={`Quitar ${line.name}, talla ${line.size}`}
                     >
                         Quitar

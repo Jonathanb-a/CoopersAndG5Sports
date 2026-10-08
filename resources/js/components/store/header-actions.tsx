@@ -18,7 +18,7 @@ export function HeaderActions({ onToggleSearch, searchOpen, className, buttonCla
     const cartLabel = count > 0 ? `Carrito, ${count} ${count === 1 ? 'pieza' : 'piezas'}` : 'Carrito';
 
     const button = cn(
-        'rounded-store text-store-text hover:text-store-link focus-visible:outline-store-accent inline-flex size-10 items-center justify-center focus-visible:outline-2 sm:size-11',
+        'rounded-store text-store-text hover:text-store-link focus-visible:outline-store-accent inline-flex size-11 items-center justify-center focus-visible:outline-2',
         buttonClassName,
     );
 

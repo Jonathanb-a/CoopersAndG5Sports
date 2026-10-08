@@ -6,14 +6,20 @@ use App\Enums\SizeType;
 use App\Enums\UserRole;
 use App\Filament\Pages\Tenancy\EditStoreProfile;
 use App\Filament\Resources\Users\Pages\CreateUser;
+use App\Models\Banner;
 use App\Models\Category;
+use App\Models\Concerns\BelongsToStore;
+use App\Models\Coupon;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -175,5 +181,52 @@ class PanelTenancyTest extends TestCase
     private function tenantSlugs(User $user, Panel $panel): array
     {
         return $user->getTenants($panel)->pluck('slug')->all();
+    }
+
+    /**
+     * Cada modelo con store_id debe usar BelongsToStore y estar cubierto en el panel: por un recurso de
+     * Filament con tenant (Filament le agrega su scope) o por un filtro explícito justificado aquí.
+     * Así un modelo nuevo con store_id no se cuela sin scope.
+     */
+    public function test_every_model_with_store_id_is_scoped_in_the_panel()
+    {
+        $panel = Filament::getPanel('admin');
+        Filament::setCurrentPanel($panel);
+
+        // modelo => dónde se filtra a mano por tienda (vacío: hoy todos tienen recurso con tenant).
+        $explicitFilters = [];
+
+        $tenantModels = collect($panel->getResources())
+            ->filter(fn (string $resource) => $resource::isScopedToTenant())
+            ->map(fn (string $resource) => $resource::getModel())
+            ->all();
+
+        $found = [];
+
+        foreach (glob(app_path('Models/*.php')) as $file) {
+            $class = 'App\\Models\\'.basename($file, '.php');
+
+            if (! is_subclass_of($class, Model::class)) {
+                continue;
+            }
+
+            if (! Schema::hasColumn((new $class)->getTable(), 'store_id')) {
+                continue;
+            }
+
+            $found[] = $class;
+
+            $this->assertContains(BelongsToStore::class, class_uses_recursive($class), "{$class} tiene store_id pero no usa BelongsToStore.");
+            $this->assertTrue(
+                in_array($class, $tenantModels, true) || isset($explicitFilters[$class]),
+                "{$class} tiene store_id pero ningún recurso del panel con tenant lo cubre ni hay un filtro explícito en esta prueba."
+            );
+        }
+
+        // Los cinco modelos con tienda de hoy; si cambia la lista, que sea a propósito.
+        $this->assertEqualsCanonicalizing(
+            [Banner::class, Category::class, Coupon::class, Order::class, Product::class],
+            $found,
+        );
     }
 }

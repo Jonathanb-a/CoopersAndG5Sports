@@ -41,10 +41,8 @@ class CouponService
             ->first();
 
         if (! $coupon) {
-            // Existe, pero en la otra tienda: se dice claro para que el cliente sepa por qué.
-            $elsewhere = Coupon::withoutGlobalScopes()->where('code', $code)->where('store_id', '!=', $store->id)->exists();
-
-            return CouponResult::invalid($elsewhere ? 'No aplica en esta tienda.' : 'El código no existe.', $subtotalCents);
+            // Un código de la otra tienda recibe la misma respuesta que uno que no existe: no se revela qué códigos hay allá.
+            return CouponResult::invalid('El código no es válido.', $subtotalCents);
         }
 
         if (! $coupon->is_active) {

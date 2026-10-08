@@ -9,6 +9,7 @@ use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\SizeType;
 use App\Enums\StockMovementType;
+use App\Enums\SystemActor;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Filament\Resources\Orders\Pages\ListOrders;
@@ -159,7 +160,7 @@ class OrderCancellationTest extends TestCase
         $bySystem = $this->order([[$variant, 1]]);
 
         $this->cancellations->cancel($byCustomer, $this->ana, 'Ya no lo quiero');
-        $this->cancellations->cancel($bySystem, null, 'Venció el apartado');
+        $this->cancellations->cancel($bySystem, SystemActor::System, 'Venció el apartado');
 
         $this->assertSame(CancelledBy::Customer, $byCustomer->cancelled_by);
         $this->assertSame($this->ana->id, $byCustomer->statusHistories()->sole()->customer_id);
@@ -253,7 +254,7 @@ class OrderCancellationTest extends TestCase
         $variant = $this->variant('Camisa', 3);
         $order = $this->order([[$variant, 2]], OrderStatus::Paid);
 
-        foreach ([$this->staff, $this->ana, null] as $actor) {
+        foreach ([$this->staff, $this->ana, SystemActor::System] as $actor) {
             try {
                 $this->cancellations->cancel($order, $actor, 'Cliente pidió cancelar');
                 $this->fail('Alguien que no es el dueño canceló un pedido pagado.');
@@ -351,7 +352,7 @@ class OrderCancellationTest extends TestCase
         $order = $this->order([[$shirt, 2], [$backorder, 1, true]], extra: ['coupon_id' => $coupon->id, 'expires_at' => now()->subHour()]);
 
         // Venció: el sistema lo cancela y las piezas regresan.
-        $this->cancellations->cancel($order, null, 'Venció el apartado');
+        $this->cancellations->cancel($order, SystemActor::System, 'Venció el apartado');
         $this->assertSame(3, $shirt->fresh()->stock);
         $this->assertSame(0, $coupon->fresh()->used_count);
 
@@ -382,7 +383,7 @@ class OrderCancellationTest extends TestCase
         $shirt = $this->variant('Camisa', 0);
         $pants = $this->variant('Pantalón', 0, '32');
         $order = $this->order([[$shirt, 2], [$pants, 1]]);
-        $this->cancellations->cancel($order, null, 'Venció el apartado');
+        $this->cancellations->cancel($order, SystemActor::System, 'Venció el apartado');
 
         // Mientras estuvo cancelado, alguien más se llevó una camisa: quedan 1 de 2.
         $shirt->update(['stock' => 1]);
@@ -411,7 +412,7 @@ class OrderCancellationTest extends TestCase
         $shirt = $this->variant('Camisa', 0);
         $pants = $this->variant('Pantalón', 0, '32');
         $order = $this->order([[$shirt, 1], [$pants, 1]]);
-        $this->cancellations->cancel($order, null, 'Venció el apartado');
+        $this->cancellations->cancel($order, SystemActor::System, 'Venció el apartado');
 
         $shirt->fresh()->update(['stock' => 0]);
         $pants->delete();
@@ -460,8 +461,8 @@ class OrderCancellationTest extends TestCase
         $variant = $this->variant('Camisa', 0);
         $ok = $this->order([[$variant, 1]]);
         $short = $this->order([[$variant, 1]]);
-        $this->cancellations->cancel($ok, null, 'Venció el apartado');
-        $this->cancellations->cancel($short, null, 'Venció el apartado');
+        $this->cancellations->cancel($ok, SystemActor::System, 'Venció el apartado');
+        $this->cancellations->cancel($short, SystemActor::System, 'Venció el apartado');
         $variant->update(['stock' => 1]);
         $this->panelAs($this->staff);
 

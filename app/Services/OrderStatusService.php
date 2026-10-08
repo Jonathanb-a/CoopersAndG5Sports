@@ -6,6 +6,7 @@ use App\Enums\CancelledBy;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Enums\SystemActor;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\Customer;
 use App\Models\Order;
@@ -28,13 +29,13 @@ class OrderStatusService
      * Cambia el estado de un pedido. En $data van los datos del paso: la referencia de pago al marcar
      * pagado; la paquetería y la guía al marcar enviado.
      *
-     * @param  User|Customer|null  $actor  quién lo hace: personal del panel, el cliente, o null si es el sistema
+     * @param  User|Customer|SystemActor  $actor  quién lo hace: personal del panel, el cliente, o SystemActor::System si es el sistema
      * @param  string|null  $note  nota para el historial (al cancelar es también el motivo)
      * @param  array{payment_reference?: ?string, tracking_carrier?: ?string, tracking_number?: ?string}  $data  datos del paso
      *
      * @throws InvalidOrderTransitionException
      */
-    public function transition(Order $order, OrderStatus $to, User|Customer|null $actor = null, ?string $note = null, array $data = []): Order
+    public function transition(Order $order, OrderStatus $to, User|Customer|SystemActor $actor, ?string $note = null, array $data = []): Order
     {
         $note = filled($note) ? trim($note) : null;
 
@@ -70,13 +71,13 @@ class OrderStatusService
     }
 
     /** Primer renglón del historial de un pedido recién creado (sin estado anterior). */
-    public function recordInitial(Order $order, User|Customer|null $actor = null, ?string $note = null): OrderStatusHistory
+    public function recordInitial(Order $order, User|Customer|SystemActor|null $actor = null, ?string $note = null): OrderStatusHistory
     {
         return $this->record($order, null, $order->status, $actor, $note);
     }
 
     /** Deja una anotación en el historial sin cambiar el estado (por ejemplo, que se dio más tiempo para pagar). */
-    public function annotate(Order $order, User|Customer|null $actor, string $note): OrderStatusHistory
+    public function annotate(Order $order, User|Customer|SystemActor $actor, string $note): OrderStatusHistory
     {
         StoreGuard::authorize($order, $actor);
 
@@ -90,7 +91,7 @@ class OrderStatusService
      *
      * @throws InvalidOrderTransitionException
      */
-    public function reactivate(Order $order, User|Customer|null $actor = null, ?string $note = null): Order
+    public function reactivate(Order $order, User|Customer|SystemActor $actor, ?string $note = null): Order
     {
         DB::transaction(function () use ($order, $actor, $note) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());
@@ -186,7 +187,7 @@ class OrderStatusService
         }
     }
 
-    private function markCancelled(Order $order, User|Customer|null $actor, ?string $note): void
+    private function markCancelled(Order $order, User|Customer|SystemActor|null $actor, ?string $note): void
     {
         $order->cancelled_at = now();
         $order->cancel_reason = $note;
@@ -197,7 +198,7 @@ class OrderStatusService
         };
     }
 
-    private function record(Order $order, ?OrderStatus $from, OrderStatus $to, User|Customer|null $actor, ?string $note): OrderStatusHistory
+    private function record(Order $order, ?OrderStatus $from, OrderStatus $to, User|Customer|SystemActor|null $actor, ?string $note): OrderStatusHistory
     {
         return OrderStatusHistory::create([
             'order_id' => $order->getKey(),

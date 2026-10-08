@@ -7,6 +7,7 @@ use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\SizeType;
 use App\Enums\StockMovementType;
+use App\Enums\SystemActor;
 use App\Enums\UserRole;
 use App\Exceptions\CrossStoreAccessException;
 use App\Models\Category;
@@ -210,13 +211,29 @@ class StoreGuardTest extends TestCase
         $this->assertSame(OrderStatus::Cancelled, $g5->fresh()->status);
     }
 
-    public function test_a_null_actor_is_the_system_and_passes()
+    public function test_a_null_actor_is_refused_and_only_the_explicit_system_actor_passes()
     {
         $order = $this->order($this->coppers);
 
-        app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled, null, 'Venció');
+        // null no es nadie: el candado lo rechaza, y los servicios ni siquiera lo aceptan como tipo.
+        $this->refuses(fn () => StoreGuard::authorize($order, null));
+        $this->expectException(\TypeError::class);
+
+        try {
+            app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled, null, 'Venció');
+        } finally {
+            $this->assertSame(OrderStatus::Reserved, $order->fresh()->status);
+        }
+    }
+
+    public function test_the_explicit_system_actor_passes_and_shows_as_system()
+    {
+        $order = $this->order($this->coppers);
+
+        app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled, SystemActor::System, 'Venció');
 
         $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
+        $this->assertSame('Sistema', $order->statusHistories()->sole()->actorLabel());
     }
 
     // ---- StockService -----------------------------------------------------------------------------

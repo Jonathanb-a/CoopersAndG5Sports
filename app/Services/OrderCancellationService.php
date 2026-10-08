@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Enums\StockMovementType;
+use App\Enums\SystemActor;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\Coupon;
@@ -29,13 +30,13 @@ class OrderCancellationService
     ) {}
 
     /**
-     * @param  User|Customer|null  $actor  quién cancela: personal del panel, el cliente, o null si es el sistema
+     * @param  User|Customer|SystemActor  $actor  quién cancela: personal del panel, el cliente, o SystemActor::System si es el sistema
      * @param  bool  $restock  true regresa al inventario las piezas de las líneas normales (las de sobre pedido nunca se descontaron)
      * @param  bool  $refunded  el pedido estaba pagado y ya se devolvió el dinero: fija refunded_at
      *
      * @throws InvalidOrderTransitionException si el pedido no está apartado ni pagado, o si no le toca a ese actor
      */
-    public function cancel(Order $order, User|Customer|null $actor = null, ?string $reason = null, bool $restock = true, bool $refunded = false): Order
+    public function cancel(Order $order, User|Customer|SystemActor $actor, ?string $reason = null, bool $restock = true, bool $refunded = false): Order
     {
         $reason = filled($reason) ? trim($reason) : null;
 

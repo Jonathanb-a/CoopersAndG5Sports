@@ -251,12 +251,28 @@ Sensación: cancha y calle, energía, grafiti.
   bloquean el pedido sin el scope de tienda, así que validan con App\Support\StoreGuard
   después del bloqueo: User (staff u owner) debe poder acceder a la tienda del pedido
   (canAccessTenant); Customer debe ser el dueño del pedido y estar en la tienda de la
-  petición actual (ResolveStore); actor null = el sistema (comandos que recorren todas
-  las tiendas a propósito). Si falla lanza CrossStoreAccessException (subclase de
-  InvalidOrderTransitionException) con un mensaje que no revela el pedido.
+  petición actual (ResolveStore); el sistema es el actor explícito SystemActor::System
+  (solo los comandos que recorren todas las tiendas a propósito, como
+  orders:expire-unpaid). Un actor null o desconocido NO pasa: lanza
+  CrossStoreAccessException (subclase de InvalidOrderTransitionException) con un
+  mensaje que no revela el pedido, igual que cualquier otro acceso no permitido.
 - StockService::change con un pedido exige que la variante y el pedido sean de la misma
   tienda; sin pedido no cambia nada. Un servicio nuevo que bloquee pedidos con
   withoutGlobalScopes debe llamar a StoreGuard::authorize.
+- Marcas (brands): se comparten entre las dos tiendas a propósito (no tienen
+  store_id). Cualquier empleado puede crearlas; solo el owner las edita o las
+  borra, y una marca con productos (de cualquier tienda, también en la papelera)
+  no se borra.
+- La categoría de un producto debe ser de la tienda del panel: se valida en el
+  servidor aunque inventen el ID por Livewire.
+- Un código de cupón de la otra tienda recibe la misma respuesta que uno que no
+  existe ("El código no es válido.").
+- products.cost está en $hidden: no sale en arreglos ni JSON del modelo. El
+  formulario de edición se lo pasa solo al owner (EditProduct).
+- PanelTenancyTest recorre los modelos con store_id: cada uno debe usar
+  BelongsToStore y estar cubierto por un recurso de Filament con tenant (o por un
+  filtro explícito anotado en esa prueba). Un modelo nuevo con store_id sin eso
+  rompe la prueba.
 
 ## Avisos por Telegram al dueño (fase 5.21a)
 - Bot de Telegram vía HTTP client; no hay paquetes extra. Variables:

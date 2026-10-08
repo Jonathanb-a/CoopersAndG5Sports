@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\SystemActor;
 use App\Exceptions\CrossStoreAccessException;
 use App\Http\Middleware\ResolveStore;
 use App\Models\Customer;
@@ -16,17 +17,23 @@ use App\Models\User;
  * scope de tienda, así que cada uno comprueba aquí que quien lo hace puede tocarlo:
  *  - User (staff u owner): debe poder acceder a la tienda del pedido (el owner, a todas).
  *  - Customer: el pedido debe ser suyo y de la tienda de la petición actual.
- *  - null: el sistema (comandos que recorren todas las tiendas a propósito). Pasa sin revisar.
+ *  - SystemActor::System: el sistema (comandos que recorren todas las tiendas a propósito). Pasa sin revisar.
+ *  - null o cualquier otra cosa: no es nadie, se rechaza.
  */
 class StoreGuard
 {
     public const MESSAGE = 'No tienes acceso a este pedido.';
 
     /** @throws CrossStoreAccessException */
-    public static function authorize(Order $order, User|Customer|null $actor): void
+    public static function authorize(Order $order, User|Customer|SystemActor|null $actor): void
     {
-        if ($actor === null) {
+        // El sistema pasa solo si se declara; null (o cualquier otra cosa) no es nadie.
+        if ($actor === SystemActor::System) {
             return;
+        }
+
+        if (! $actor instanceof User && ! $actor instanceof Customer) {
+            throw new CrossStoreAccessException(self::MESSAGE);
         }
 
         if ($actor instanceof User) {

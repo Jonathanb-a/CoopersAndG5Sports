@@ -7,6 +7,7 @@ use App\Enums\DeliveryMethod;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\SizeType;
+use App\Enums\SystemActor;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\Category;
@@ -187,7 +188,7 @@ class OrderStatusServiceTest extends TestCase
 
         $this->requestingStore($this->coppers);
         $this->service->transition($byCustomer, OrderStatus::Cancelled, $this->ana, 'Ya no lo quiero');
-        $this->service->transition($bySystem, OrderStatus::Cancelled, null, 'Venció el apartado');
+        $this->service->transition($bySystem, OrderStatus::Cancelled, SystemActor::System, 'Venció el apartado');
 
         $customerRow = $byCustomer->statusHistories()->sole();
         $systemRow = $bySystem->statusHistories()->sole();

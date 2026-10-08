@@ -28,6 +28,9 @@ class Product extends Model
         'is_active',
     ];
 
+    /** El costo solo lo ve el owner en el panel: nunca sale en un arreglo o JSON del modelo (p. ej. una respuesta Inertia). */
+    protected $hidden = ['cost'];
+
     protected function casts(): array
     {
         return [

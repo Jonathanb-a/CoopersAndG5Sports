@@ -7,6 +7,7 @@ use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\SalesPeriod;
 use App\Enums\SizeType;
+use App\Enums\SystemActor;
 use App\Enums\UserRole;
 use App\Filament\Widgets\ExpiringReservations;
 use App\Filament\Widgets\LatestOrders;
@@ -209,7 +210,7 @@ class SalesDashboardTest extends TestCase
         $this->assertSame(1400.0, $report->summary($this->g5, $from, $to)['sales']);
         $this->assertSame(2, $report->summary($this->g5, $from, $to)['orders']);
 
-        app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled);
+        app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled, SystemActor::System);
 
         $summary = $report->summary($this->g5, $from, $to);
         $this->assertSame(400.0, $summary['sales']);

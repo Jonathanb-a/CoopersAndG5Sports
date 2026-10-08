@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Brands\Tables;
 
+use App\Filament\Resources\Brands\BrandResource;
+use App\Models\Brand;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -21,7 +24,10 @@ class BrandsTable
             ])
             ->defaultSort('name')
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->visible(fn (Brand $record) => BrandResource::canEdit($record)),
+                DeleteAction::make()
+                    ->visible(fn (Brand $record) => BrandResource::canDelete($record))
+                    ->before(BrandResource::blockDeleteWhenInUse()),
             ]);
     }
 }

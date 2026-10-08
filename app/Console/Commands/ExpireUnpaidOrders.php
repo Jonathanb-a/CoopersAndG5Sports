@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\OrderStatus;
+use App\Enums\SystemActor;
 use App\Models\Order;
 use App\Services\OrderCancellationService;
 use App\Services\OverdueCashOrders;
@@ -48,7 +49,7 @@ class ExpireUnpaidOrders extends Command
                         return false;
                     }
 
-                    $cancellations->cancel($locked, null, self::REASON, restock: true);
+                    $cancellations->cancel($locked, SystemActor::System, self::REASON, restock: true);
 
                     return true;
                 });

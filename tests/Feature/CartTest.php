@@ -585,7 +585,7 @@ class CartTest extends TestCase
 
         $this->post(self::G5.'/carrito/cupon', ['code' => 'VERANO'])
             ->assertRedirect(self::G5.'/carrito')
-            ->assertSessionHasErrors(['code' => 'No aplica en esta tienda.']);
+            ->assertSessionHasErrors(['code' => 'El código no es válido.']);
 
         $this->assertNull($this->cart(self::G5)['cart']['coupon']);
         $this->assertSame('1000.00', $this->cart(self::G5)['cart']['total']);
@@ -600,7 +600,7 @@ class CartTest extends TestCase
 
         $this->post(self::COPPERS.'/carrito/cupon', ['code' => 'VERANO']);
 
-        foreach (['VENCIDO' => 'Venció.', 'AGOTADO' => 'Ya no tiene usos.', 'APAGADO' => 'El cupón no está activo.', 'NOEXISTE' => 'El código no existe.'] as $code => $reason) {
+        foreach (['VENCIDO' => 'Venció.', 'AGOTADO' => 'Ya no tiene usos.', 'APAGADO' => 'El cupón no está activo.', 'NOEXISTE' => 'El código no es válido.'] as $code => $reason) {
             $this->post(self::COPPERS.'/carrito/cupon', ['code' => $code])->assertSessionHasErrors(['code' => $reason]);
         }
 
@@ -671,7 +671,7 @@ class CartTest extends TestCase
 
     public function test_the_coupon_is_dropped_when_it_is_deleted()
     {
-        $this->assertCouponDroppedAfter(fn (Coupon $coupon) => $coupon->delete(), 'El código no existe.');
+        $this->assertCouponDroppedAfter(fn (Coupon $coupon) => $coupon->delete(), 'El código no es válido.');
     }
 
     public function test_the_coupon_is_revalidated_when_a_quantity_changes()

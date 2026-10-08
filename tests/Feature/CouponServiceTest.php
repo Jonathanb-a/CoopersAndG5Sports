@@ -48,7 +48,7 @@ class CouponServiceTest extends TestCase
 
         $this->assertTrue($inCoppers->valid);
         $this->assertFalse($inG5->valid);
-        $this->assertSame('No aplica en esta tienda.', $inG5->reason);
+        $this->assertSame('El código no es válido.', $inG5->reason);
         $this->assertSame('0.00', $inG5->discount());
         $this->assertSame('1000.00', $inG5->total());
     }
@@ -67,7 +67,7 @@ class CouponServiceTest extends TestCase
         $result = $this->service->validate($this->coppers, 'NOEXISTE', '1000.00');
 
         $this->assertFalse($result->valid);
-        $this->assertSame('El código no existe.', $result->reason);
+        $this->assertSame('El código no es válido.', $result->reason);
         $this->assertFalse($this->service->validate($this->coppers, '   ', '1000.00')->valid);
         $this->assertFalse($this->service->validate($this->coppers, null, '1000.00')->valid);
     }
@@ -273,7 +273,7 @@ class CouponServiceTest extends TestCase
 
         $coupon->delete();
 
-        $this->assertSame('El código no existe.', $this->service->applied($this->coppers, '1000.00')->reason);
+        $this->assertSame('El código no es válido.', $this->service->applied($this->coppers, '1000.00')->reason);
         $this->assertNull(session(CouponService::SESSION_KEY));
     }
 
@@ -316,7 +316,19 @@ class CouponServiceTest extends TestCase
         $result = $this->service->apply($this->coppers, 'mundial', '1000.00');
 
         $this->assertFalse($result->valid);
-        $this->assertSame('No aplica en esta tienda.', $result->reason);
+        $this->assertSame('El código no es válido.', $result->reason);
         $this->assertNull(session(CouponService::SESSION_KEY));
+    }
+
+    public function test_a_code_that_only_exists_in_the_other_store_gets_the_same_answer_as_one_that_does_not_exist()
+    {
+        $this->coupon($this->g5, 'SOLOG5');
+
+        $elsewhere = $this->service->validate($this->coppers, 'SOLOG5', '1000.00');
+        $missing = $this->service->validate($this->coppers, 'NOHAY', '1000.00');
+
+        $this->assertFalse($elsewhere->valid);
+        $this->assertSame('El código no es válido.', $elsewhere->reason);
+        $this->assertSame($missing->reason, $elsewhere->reason);
     }
 }

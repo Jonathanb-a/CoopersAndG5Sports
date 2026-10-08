@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Enums\StockMovementType;
+use App\Enums\SystemActor;
 use App\Exceptions\InvalidOrderTransitionException;
 use App\Models\Coupon;
 use App\Models\Customer;
@@ -36,7 +37,7 @@ class OrderReservationService
      *
      * @throws InvalidOrderTransitionException
      */
-    public function extend(Order $order, int $hours, User|Customer|null $actor = null): Order
+    public function extend(Order $order, int $hours, User|Customer|SystemActor $actor): Order
     {
         if (! in_array($hours, self::EXTENSION_HOURS, true)) {
             throw new InvalidOrderTransitionException('Solo se pueden dar 24 o 48 horas más.');
@@ -93,7 +94,7 @@ class OrderReservationService
      *
      * @throws InvalidOrderTransitionException
      */
-    public function reactivate(Order $order, User|Customer|null $actor = null): Order
+    public function reactivate(Order $order, User|Customer|SystemActor $actor): Order
     {
         DB::transaction(function () use ($order, $actor) {
             $locked = Order::withoutGlobalScopes()->lockForUpdate()->findOrFail($order->getKey());

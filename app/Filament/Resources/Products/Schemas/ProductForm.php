@@ -27,6 +27,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\Rules\Unique;
 
 class ProductForm
@@ -67,6 +68,9 @@ class ProductForm
                             ->relationship('category', 'name')
                             ->searchable()
                             ->preload()
+                            // En el servidor: la categoría tiene que ser de esta tienda, aunque inventen el ID.
+                            ->exists(table: 'categories', column: 'id', modifyRuleUsing: fn (Exists $rule) => $rule->where('store_id', Filament::getTenant()?->getKey()))
+                            ->validationMessages(['exists' => 'Elige una categoría de esta tienda.'])
                             ->required(),
                         Select::make('brand_id')
                             ->label('Marca')

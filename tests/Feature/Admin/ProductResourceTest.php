@@ -313,4 +313,58 @@ class ProductResourceTest extends TestCase
         $this->get('/admin/g5/products')->assertOk();
         $this->get('/admin/g5/categories')->assertOk()->assertSee('Tenis de Fútbol')->assertDontSee('Camisas');
     }
+
+    public function test_hidden_cost_still_loads_in_the_owner_edit_form_and_survives_saving_other_fields()
+    {
+        $product = $this->product($this->g5, $this->g5Category, 'Jersey', 'Rojo', ['cost' => 50]);
+        $product->variants()->create(['size' => 'M', 'stock' => 1]);
+
+        $this->panelAs(UserRole::Owner, $this->g5);
+
+        Livewire::test(EditProduct::class, ['record' => $product->getRouteKey()])
+            ->assertFormSet(['cost' => '50.00'])
+            ->fillForm(['price' => 120])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $fresh = $product->fresh();
+        $this->assertSame('50.00', $fresh->cost);
+        $this->assertSame('120.00', $fresh->price);
+        $this->assertArrayNotHasKey('cost', $fresh->toArray());
+    }
+
+    public function test_a_category_of_another_store_is_rejected_even_if_the_id_is_forged()
+    {
+        $this->panelAs(UserRole::Staff, $this->coppers);
+
+        Livewire::test(CreateProduct::class)
+            ->fillForm($this->formData($this->g5Category))
+            ->call('create')
+            ->assertHasFormErrors(['category_id']);
+
+        $this->assertDatabaseCount('products', 0);
+
+        // Y al editar un producto propio, cambiarle la categoría a una de la otra tienda tampoco pasa.
+        $product = $this->product($this->coppers, $this->coppersCategory, 'Camisa', 'Azul');
+        $product->variants()->create(['size' => 'M', 'stock' => 1]);
+
+        Livewire::test(EditProduct::class, ['record' => $product->getRouteKey()])
+            ->set('data.category_id', $this->g5Category->id)
+            ->call('save')
+            ->assertHasFormErrors(['category_id']);
+
+        $this->assertSame($this->coppersCategory->id, $product->fresh()->category_id);
+    }
+
+    public function test_a_category_of_the_same_store_still_saves()
+    {
+        $this->panelAs(UserRole::Staff, $this->coppers);
+
+        Livewire::test(CreateProduct::class)
+            ->fillForm($this->formData($this->coppersCategory))
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseCount('products', 1);
+    }
 }

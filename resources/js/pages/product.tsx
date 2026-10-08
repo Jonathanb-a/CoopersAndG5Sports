@@ -144,7 +144,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
 
                     <Reveal delay={0.08}>
                         {product.brand && <p className="text-store-muted text-sm font-semibold tracking-wider uppercase">{product.brand}</p>}
-                        <h1 className="store-heading mt-1 text-4xl sm:text-5xl">{product.name}</h1>
+                        <h1 className="store-heading mt-1 text-4xl text-balance break-words sm:text-5xl">{product.name}</h1>
                         {product.color && (
                             <p className="text-store-muted mt-2">
                                 Color: <span className="text-store-text font-medium">{product.color}</span>

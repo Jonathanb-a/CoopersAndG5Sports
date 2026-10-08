@@ -79,7 +79,7 @@ function CatalogContent({ category, products, pagination, filters, options }: Ca
     return (
         <Container as="section" className="py-8 sm:py-12 lg:py-16" aria-labelledby="titulo-catalogo">
             <Reveal className="mb-8 text-center sm:mb-12">
-                <h1 id="titulo-catalogo" className="store-heading text-4xl sm:text-5xl lg:text-6xl">
+                <h1 id="titulo-catalogo" className="store-heading text-4xl text-balance break-words sm:text-5xl lg:text-6xl">
                     {title}
                 </h1>
                 {hasSearch && (

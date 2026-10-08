@@ -28,6 +28,8 @@ export interface MotionSet {
     addToCart: { holdMs: number; fade: number; /** escala inicial del «Agregado» (efecto de pop) */ pop?: number };
     /** Fundido breve al cambiar de página. */
     page: { duration: number };
+    /** Carrusel de banners: segundos que dura cada uno, segundos de la transición y su tipo. */
+    carousel: { interval: number; duration: number; effect: 'fade' | 'slide' };
     /** Rutas sin ninguna animación: pagar y formularios. */
     quietPaths: string[];
     /** Etiquetas de producto: entrada tipo sello (escala y rotación en grados, en segundos). */

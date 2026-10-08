@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/Themes/context';
+import { useObserverReady, useSeen } from '@/Themes/use-entrance';
 import { useMotion } from '@/Themes/use-motion';
-import { useInView } from 'motion/react';
 import { type ComponentProps, useRef } from 'react';
 
 export type TagKind = 'sold-out' | 'backorder' | 'last-piece';
@@ -29,10 +29,13 @@ export function Tag({ kind, className, children, style, ...props }: TagProps) {
     const { motionSet } = useTheme();
     const active = useMotion();
     const ref = useRef<HTMLSpanElement>(null);
-    const seen = useInView(ref, { once: true, amount: 0.6 });
+    // Solo se esconde a esperar cuando el observer ya puede revelarla; si no, se queda puesta y visible.
+    const ready = useObserverReady();
+    const wants = Boolean(motionSet?.tag && active && !active.reduced && !active.mobile);
+    const seen = useSeen(ref, ready && wants, 0.6);
 
     // Sin movimiento reducido ni celular: en celular la etiqueta aparece ya puesta.
-    const stamp = Boolean(motionSet?.tag && active && !active.reduced && !active.mobile);
+    const stamp = ready && wants;
 
     return (
         <span

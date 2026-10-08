@@ -7,6 +7,7 @@ export default defineConfig({
     resolve: { alias: { '@': fileURLToPath(new URL('./resources/js', import.meta.url)) } },
     test: {
         environment: 'jsdom',
+        setupFiles: ['resources/js/test-setup.ts'],
         include: ['resources/js/**/*.test.{ts,tsx}'],
     },
 });

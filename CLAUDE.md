@@ -370,6 +370,26 @@ Sensación: cancha y calle, energía, grafiti.
   hover, sin sello, sin banner escalado y sin movimiento continuo de fondo);
   ninguna animación en checkout, carrito, pedidos, "Mi cuenta", login, registro ni
   recuperar contraseña (quietPaths). No se agregan animaciones fuera de esta lista.
+- Regla: TODO contenido animado termina visible aunque algo falle (fase 6.3c). El
+  contenido se renderiza visible (así sale en el HTML); el estado oculto se pone
+  solo en el navegador, justo antes de pintar, y solo cuando ya hay con qué
+  revelarlo (useEntrance; para lo que entra con scroll, cuando existe
+  IntersectionObserver). Al terminar, o si la animación falla, se quitan los
+  estilos. Nunca `initial` oculto de Motion en el render, ni el useInView de Motion
+  (lanza error sin observer): se usa useSeen. Un texto desplazado dentro de un
+  overflow-hidden no «entra en pantalla» para el observer: se observa la CAJA, no
+  el texto (así se quedaban sin revelar los títulos de G5). La caja del corte deja
+  aire arriba para los acentos de las mayúsculas.
+- Títulos grandes: tamaño fluido con clamp() y vw, text-balance y break-words;
+  nunca una sola línea de tamaño fijo.
+- Carrusel de banners (BannerCarousel): avance automático SIN controles (ni
+  flechas, ni puntos, ni pausa). Tiempos en MotionSet.carousel: 5 s por banner y
+  transición de 0.5 a 0.8 s (fundido en Copper's, deslizamiento en G5), solo
+  opacity y transform. Se pausa con el cursor encima, mientras el dedo toca, con el
+  foco dentro y con la pestaña oculta; en celular se cambia deslizando. Con
+  prefers-reduced-motion no avanza (queda el primero, con swipe). Un solo banner:
+  imagen fija sin carrusel. Sin banners: no pinta nada. Solo el primero carga con
+  prioridad; caja 16:10 en celular y 21:9 desde tableta; título con degradado.
 - Pruebas del frontend: vitest (npm test, resources/js/**/*.test.tsx), por tema:
   rangos de los valores, movimiento reducido, celular, rutas de pagar, el otro tema
   sin cambios y el render del layout completo.

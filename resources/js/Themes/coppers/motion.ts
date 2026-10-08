@@ -13,6 +13,8 @@ export const coppersMotion: MotionSet = {
     drawer: { duration: 0.4 },
     addToCart: { holdMs: 1800, fade: 0.3 },
     page: { duration: 0.3 },
+    // Banners: 5 s cada uno y un fundido sutil.
+    carousel: { interval: 5, duration: 0.8, effect: 'fade' },
     quietPaths: ['/checkout', '/carrito', '/pedido', '/mi-cuenta', '/login', '/register', '/forgot-password', '/reset-password'],
 };
 

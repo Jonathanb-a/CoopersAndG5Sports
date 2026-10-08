@@ -15,6 +15,8 @@ export const g5Motion: MotionSet = {
     drawer: { duration: 0.26 },
     addToCart: { holdMs: 2000, fade: 0.2, pop: 0.8 },
     page: { duration: 0.18 },
+    // Banners: 5 s cada uno y un deslizamiento un poco más marcado.
+    carousel: { interval: 5, duration: 0.55, effect: 'slide' },
     quietPaths: ['/checkout', '/carrito', '/pedido', '/mi-cuenta', '/login', '/register', '/forgot-password', '/reset-password'],
     tag: { duration: 0.28, scale: 1.6, rotate: -14 },
     heading: { duration: 0.3 },

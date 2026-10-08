@@ -1,10 +1,10 @@
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useEntrance } from '@/Themes/use-entrance';
 import { useMotion } from '@/Themes/use-motion';
 import { type ProductSize } from '@/types';
 import { Link } from '@inertiajs/react';
-import { motion } from 'motion/react';
-import { type ReactNode } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { AddToCartLabel } from './add-to-cart-label';
 import { buttonVariants, StoreButton } from './button';
 
@@ -31,6 +31,17 @@ interface BuyBarProps {
  */
 export function BuyBar({ name, label, amount, bleed = false, error, children }: BuyBarProps) {
     const active = useMotion();
+    const ref = useRef<HTMLDivElement>(null);
+    const moving = active && !active.reduced ? active.set : null;
+
+    // Se renderiza visible; solo se esconde para entrar cuando ya está en el navegador (useEntrance).
+    useEntrance({
+        targetRef: ref,
+        hidden: moving ? { opacity: 0, y: moving.reveal.mobileDistance } : null,
+        visible: moving ? { opacity: 1, y: 0 } : null,
+        transition: moving ? { duration: moving.reveal.mobileDuration, ease: moving.ease } : { duration: 0 },
+        trigger: 'mount',
+    });
 
     const className = cn(
         'bg-store-surface border-store-border font-store-body text-store-text sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 md:hidden',
@@ -52,22 +63,8 @@ export function BuyBar({ name, label, amount, bleed = false, error, children }: 
         </>
     );
 
-    if (active && !active.reduced) {
-        return (
-            <motion.div
-                data-buy-bar={name}
-                className={className}
-                initial={{ opacity: 0, y: active.set.reveal.mobileDistance }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: active.set.reveal.mobileDuration, ease: active.set.ease }}
-            >
-                {content}
-            </motion.div>
-        );
-    }
-
     return (
-        <div data-buy-bar={name} className={className}>
+        <div ref={ref} data-buy-bar={name} className={className}>
             {content}
         </div>
     );

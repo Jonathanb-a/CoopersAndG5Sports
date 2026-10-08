@@ -135,6 +135,18 @@
     background-image: var(--g5-paint);
 }
 
+/* El borde inferior de las manchas se funde con el fondo: sin él se veía una franja de color cortada en seco. */
+[data-theme='g5'] .store-paint-drift::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: -1;
+    height: 45%;
+    background: linear-gradient(to bottom, transparent, var(--store-bg));
+    pointer-events: none;
+}
+
 @keyframes g5-drift {
     from {
         transform: translate3d(0, 0, 0);

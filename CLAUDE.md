@@ -314,3 +314,19 @@ Sensación: cancha y calle, energía, grafiti.
   conserva. El AuthenticateSession de Laravel no sirve aquí: usa el guard del panel.
 - Cuentas de Google (sin contraseña) usan el mismo flujo para definir una; el
   correo lo dice. El flujo no revela si la cuenta existe ni cómo se creó.
+
+## Dashboard de ventas del panel (fase 5.21b)
+- Dashboard de Filament por tienda (tenant): cada tienda ve solo lo suyo. Filtro
+  de periodo (SalesPeriod): hoy, 7 días, 30 días (por defecto), este mes.
+- Cifras en SalesReport / InventoryReport con consultas agregadas (sin cargar
+  pedidos en memoria), siguiendo "Conteo de ventas". Tarjetas: ventas, pedidos,
+  ticket promedio (con flecha y % contra el periodo anterior) y por cobrar (foto
+  de hoy, sin comparación). La utilidad y los costos solo los ve el owner.
+- Gráficas: ventas por día, ventas por canal, ventas por entrega y 5 productos
+  más vendidos por piezas. Listas: últimos 8 pedidos, apartados por vencer
+  (12 h), alertas de stock y pedidos que requieren acción.
+- "Requieren acción" (OrdersNeedingAction): solicitud de cancelación, entrega a
+  domicilio sin fecha, recogida sin fecha (pagado), pagado sin enviar y efectivo
+  vencido sin entregar.
+- Índices de orders para el dashboard: (store_id, status, paid_at) y
+  (store_id, created_at).

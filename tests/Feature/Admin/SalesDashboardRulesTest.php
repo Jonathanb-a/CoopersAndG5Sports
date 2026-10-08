@@ -404,11 +404,39 @@ class SalesDashboardRulesTest extends TestCase
             // La solicitud de cancelación va primero; luego por antigüedad del pago.
             ->assertCanSeeTableRecords([$requested, $paid, $localPaid, $localShipped], inOrder: true)
             ->assertCanNotSeeTableRecords([$localScheduled, $pickupShipped, $reserved, $delivered, $cancelled, $other])
-            ->assertTableColumnStateSet('reasons', ['Solicitó cancelar', 'Pagado sin enviar'], $requested)
-            ->assertTableColumnStateSet('reasons', ['Pagado sin enviar'], $paid)
+            ->assertTableColumnStateSet('reasons', ['Solicitó cancelar', 'Recogida sin fecha', 'Pagado sin enviar'], $requested)
+            ->assertTableColumnStateSet('reasons', ['Recogida sin fecha', 'Pagado sin enviar'], $paid)
             ->assertTableColumnStateSet('reasons', ['Entrega sin fecha', 'Pagado sin enviar'], $localPaid)
             ->assertTableColumnStateSet('reasons', ['Entrega sin fecha'], $localShipped)
             ->assertSee("/admin/g5/orders/{$requested->id}", escape: false);
+    }
+
+    public function test_orders_needing_action_also_lists_unscheduled_pickups_and_overdue_cash_orders()
+    {
+        $now = now()->toDateTimeString();
+        $cash = ['payment_method' => PaymentMethod::Cash];
+
+        $pickupNoDate = $this->order('G5-00001', OrderStatus::Paid, 100, $now);
+        $pickupScheduled = $this->order('G5-00002', OrderStatus::Paid, 100, $now, extra: ['delivery_scheduled_date' => today()->addDay()]);
+        $cashOverdueConfirmed = $this->order('G5-00003', OrderStatus::Paid, 100, $now, extra: [...$cash, 'delivery_scheduled_date' => today()->subDay(), 'expires_at' => now()->subHours(3)]);
+        $cashOverdueShipped = $this->order('G5-00004', OrderStatus::Shipped, 100, $now, extra: [...$cash, 'delivery_method' => DeliveryMethod::Local, 'delivery_scheduled_date' => today()->subDay(), 'expires_at' => now()->subHours(3)]);
+
+        // No requieren acción: efectivo todavía en tiempo, efectivo ya entregado o cancelado, y de la otra tienda.
+        $cashOnTime = $this->order('G5-00005', OrderStatus::Shipped, 100, $now, extra: [...$cash, 'delivery_method' => DeliveryMethod::Local, 'delivery_scheduled_date' => today()->addDay(), 'expires_at' => now()->addDay()]);
+        $cashDelivered = $this->order('G5-00006', OrderStatus::Delivered, 100, $now, extra: [...$cash, 'expires_at' => now()->subDay(), 'delivered_at' => $now]);
+        $cashCancelled = $this->order('G5-00007', OrderStatus::Cancelled, 100, extra: [...$cash, 'expires_at' => now()->subDay()]);
+        $transferShipped = $this->order('G5-00008', OrderStatus::Shipped, 100, $now, extra: ['expires_at' => now()->subDay()]);
+        $other = $this->order('CP-00001', OrderStatus::Shipped, 100, $now, $this->coppers, [...$cash, 'expires_at' => now()->subDay()]);
+
+        $this->panelAs($this->staffG5, $this->g5);
+
+        Livewire::test(OrdersNeedingAction::class)
+            ->assertCanSeeTableRecords([$pickupNoDate, $pickupScheduled, $cashOverdueConfirmed, $cashOverdueShipped])
+            ->assertCanNotSeeTableRecords([$cashOnTime, $cashDelivered, $cashCancelled, $transferShipped, $other])
+            ->assertTableColumnStateSet('reasons', ['Recogida sin fecha', 'Pagado sin enviar'], $pickupNoDate)
+            ->assertTableColumnStateSet('reasons', ['Pagado sin enviar'], $pickupScheduled)
+            ->assertTableColumnStateSet('reasons', ['Pagado sin enviar', 'Efectivo sin entregar'], $cashOverdueConfirmed)
+            ->assertTableColumnStateSet('reasons', ['Efectivo sin entregar'], $cashOverdueShipped);
     }
 
     // ---- Alertas de stock -------------------------------------------------------------------------

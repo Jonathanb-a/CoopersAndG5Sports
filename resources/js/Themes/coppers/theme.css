@@ -50,3 +50,19 @@
 
     color-scheme: light;
 }
+
+/*
+ * Cajón (menú y mini carrito) de Copper's: entrada deslizante suave. La duración y el easing salen de
+ * Themes/coppers/motion.ts (variables --motion-*), no se escriben aquí. Sin movimiento con
+ * prefers-reduced-motion (el cajón aparece de golpe).
+ */
+[data-theme='coppers'] [data-drawer] {
+    animation-duration: var(--motion-drawer-duration);
+    animation-timing-function: var(--motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme='coppers'] [data-drawer] {
+        animation: none;
+    }
+}

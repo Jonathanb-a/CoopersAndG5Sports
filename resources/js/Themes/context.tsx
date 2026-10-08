@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { type MotionSet } from './motion';
 
 /** Animación de entrada propia de cada tema (la usa el componente Reveal). */
 export interface ThemeMotion {
@@ -10,6 +11,8 @@ export interface ThemeMotion {
 interface ThemeContextValue {
     name: string;
     motion: ThemeMotion;
+    /** Movimiento completo del tema (tarjetas, encabezado, cajón, página). Un tema sin él no lo recibe. */
+    motionSet?: MotionSet;
     /** Elemento raíz del tema: los paneles que se montan fuera del layout (Radix) lo usan para heredar las variables CSS. */
     root: HTMLElement | null;
 }

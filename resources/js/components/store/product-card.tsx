@@ -1,6 +1,10 @@
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/Themes/context';
+import { cssTransition } from '@/Themes/motion';
+import { useMotion } from '@/Themes/use-motion';
 import { Link } from '@inertiajs/react';
+import { type CSSProperties } from 'react';
 import { Tag, type TagKind } from './tag';
 
 interface ProductCardProps {
@@ -8,6 +12,8 @@ interface ProductCardProps {
     price: number | string;
     brand?: string | null;
     imageUrl?: string | null;
+    /** Segunda foto: en temas con movimiento, la tarjeta cambia a ella al pasar el cursor. */
+    secondImageUrl?: string | null;
     tag?: TagKind | null;
     href?: string;
     className?: string;
@@ -18,12 +24,49 @@ interface ProductCardProps {
  * Las fotos son chicas, así que van sin estirarse (nunca más grandes que su tamaño real), enteras y
  * centradas en un recuadro del mismo alto en todas las tarjetas.
  */
-export function ProductCard({ name, price, brand, imageUrl, tag, href, className }: ProductCardProps) {
+export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag, href, className }: ProductCardProps) {
+    const { motionSet } = useTheme();
+    const active = useMotion();
+    // Solo con hover real (no en celular) y sin movimiento reducido: el zoom y la segunda foto son del tema.
+    const hover = motionSet && active && !active.reduced && !active.mobile ? motionSet : null;
+    const second = hover && imageUrl && secondImageUrl ? secondImageUrl : null;
+
     const body = (
         <>
             <div className="bg-store-photo relative aspect-square overflow-hidden">
                 {imageUrl ? (
-                    <img src={imageUrl} alt={name} loading="lazy" className="absolute inset-0 m-auto max-h-full max-w-full object-contain" />
+                    <>
+                        <img
+                            src={imageUrl}
+                            alt={name}
+                            loading="lazy"
+                            data-photo="main"
+                            className={cn(
+                                'absolute inset-0 m-auto max-h-full max-w-full object-contain',
+                                hover && 'will-change-transform group-hover/card:scale-(--card-zoom)',
+                                second && 'group-hover/card:opacity-0',
+                            )}
+                            style={
+                                hover
+                                    ? ({
+                                          ...cssTransition(hover, hover.card.duration, 'transform, opacity'),
+                                          '--card-zoom': String(hover.card.scale),
+                                      } as CSSProperties)
+                                    : undefined
+                            }
+                        />
+                        {second && hover && (
+                            <img
+                                src={second}
+                                alt=""
+                                loading="lazy"
+                                aria-hidden="true"
+                                data-photo="second"
+                                className="absolute inset-0 m-auto max-h-full max-w-full object-contain opacity-0 group-hover/card:opacity-100"
+                                style={cssTransition(hover, hover.card.duration, 'opacity')}
+                            />
+                        )}
+                    </>
                 ) : (
                     <div className="store-heading text-store-muted absolute inset-0 flex items-center justify-center text-6xl" aria-hidden="true">
                         {name.charAt(0)}
@@ -40,7 +83,7 @@ export function ProductCard({ name, price, brand, imageUrl, tag, href, className
     );
 
     return (
-        <article className={cn('store-surface store-transition store-lift flex h-full flex-col overflow-hidden', className)}>
+        <article className={cn('group/card store-surface store-transition store-lift flex h-full flex-col overflow-hidden', className)}>
             {href ? (
                 <Link
                     href={href}

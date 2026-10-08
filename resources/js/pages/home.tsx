@@ -72,6 +72,7 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
                                     href={`/producto/${product.slug}`}
                                     price={product.price}
                                     imageUrl={product.image_url}
+                                    secondImageUrl={product.second_image_url}
                                     tag={product.tag}
                                 />
                             </ScrollReveal>

@@ -1,3 +1,4 @@
+import { AddToCartLabel } from '@/components/store/add-to-cart-label';
 import { StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
 import { MiniCartPanel } from '@/components/store/mini-cart';
@@ -8,10 +9,11 @@ import { SectionHeading } from '@/components/store/section-heading';
 import { SizeSelector } from '@/components/store/size-selector';
 import { formatMoney, whatsappUrl } from '@/lib/store';
 import StoreLayout from '@/Themes';
+import { useTheme } from '@/Themes/context';
 import { type ProductDetail, type SharedData, type StoreProduct } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { MessageCircle, ShoppingBag } from 'lucide-react';
-import { useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ProductPageProps {
     product: ProductDetail;
@@ -41,6 +43,19 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
     const [adding, setAdding] = useState(false);
     const [addError, setAddError] = useState<string | null>(null);
     const [panelOpen, setPanelOpen] = useState(false);
+    const { motionSet } = useTheme();
+    const [added, setAdded] = useState(false);
+
+    // Confirmación del botón (solo en temas con movimiento): se quita sola después de un momento.
+    useEffect(() => {
+        if (!added || !motionSet) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => setAdded(false), motionSet.addToCart.holdMs);
+
+        return () => window.clearTimeout(timer);
+    }, [added, motionSet]);
 
     // Agrega una pieza de la talla elegida. El servidor lee precio y stock de la base de datos: aquí solo va el id.
     const addToCart = () => {
@@ -60,7 +75,10 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                     setAdding(true);
                     setAddError(null);
                 },
-                onSuccess: () => setPanelOpen(true),
+                onSuccess: () => {
+                    setPanelOpen(true);
+                    setAdded(true);
+                },
                 onError: (errors) => setAddError(errors.cart ?? 'No pudimos agregar el producto. Inténtalo de nuevo.'),
                 onFinish: () => setAdding(false),
             },
@@ -166,8 +184,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                                         aria-describedby={addError ? 'carrito-error' : undefined}
                                         className="w-full"
                                     >
-                                        <ShoppingBag className="size-5" aria-hidden="true" />
-                                        {soldOut ? 'Agotado' : adding ? 'Agregando…' : 'Agregar al carrito'}
+                                        <AddToCartLabel soldOut={soldOut} adding={adding} added={added} />
                                     </StoreButton>
                                     {addError && (
                                         <p
@@ -212,6 +229,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
                                     brand={item.brand}
                                     price={item.price}
                                     imageUrl={item.image_url}
+                                    secondImageUrl={item.second_image_url}
                                     tag={item.tag}
                                     href={`/producto/${item.slug}`}
                                 />

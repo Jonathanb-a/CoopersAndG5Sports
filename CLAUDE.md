@@ -330,3 +330,25 @@ Sensación: cancha y calle, energía, grafiti.
   vencido sin entregar.
 - Índices de orders para el dashboard: (store_id, status, paid_at) y
   (store_id, created_at).
+
+## Animaciones (fase 6.1)
+- Paquete: motion (motion/react). Cada tema define su propio MotionSet en
+  resources/js/Themes/{tema}/motion.ts y lo entrega en el contexto del tema
+  (motionSet). Los componentes compartidos solo leen esos valores (useMotion);
+  un tema sin motionSet no recibe estas animaciones. Hoy solo Copper's lo tiene;
+  G5 conserva su animación de entrada de siempre (Reveal) y nada más.
+- Copper's (Themes/coppers/motion.ts, único lugar con los números): entradas de
+  300 a 500 ms, ease-out suave, desplazamientos de 8 a 16 px, nada que rebote.
+  Solo estas animaciones: aparición al hacer scroll en secciones y rejillas (con
+  escalonado corto y topado), tarjeta de producto (zoom leve de la foto y cambio a
+  la segunda foto, second_image_url), encabezado que se recoge al bajar y aparece
+  al subir, cajón/mini carrito deslizante (CSS con variables --motion-* sacadas de
+  motion.ts), confirmación "Agregado" en el botón de agregar y fundido breve entre
+  páginas. No se agregan animaciones decorativas fuera de esta lista.
+- Reglas: respetar prefers-reduced-motion (sin movimiento: no se envuelve nada ni
+  hay hover, solo cambios instantáneos); animar solo opacity y transform; nada que
+  provoque reflujo ni saltos de layout (CLS); en celular, versión ligera (menos
+  desplazamiento, sin escalonado ni hover); ninguna animación en checkout, carrito,
+  pedidos, "Mi cuenta", login, registro ni recuperar contraseña (quietPaths).
+- Pruebas del frontend: vitest (npm test, resources/js/**/*.test.tsx), con
+  movimiento reducido, celular, rutas de pagar y G5 sin cambios.

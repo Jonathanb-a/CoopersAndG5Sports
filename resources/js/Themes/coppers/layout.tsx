@@ -1,18 +1,14 @@
 import { Container, HeaderActions, MobileMenu, SearchField, StoreLogo, WhatsAppLink } from '@/components/store';
+import { PageFade } from '@/components/store/page-fade';
+import { RetractingHeader } from '@/components/store/retracting-header';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { MotionConfig } from 'motion/react';
 import { type ReactNode, useState } from 'react';
-import { ThemeContext, type ThemeMotion } from '../context';
+import { ThemeContext } from '../context';
+import { coppersMotion, coppersMotionVars, coppersRevealMotion } from './motion';
 import './theme.css';
-
-// Aparecer y deslizar suave, nada que rebote.
-const motion: ThemeMotion = {
-    initial: { opacity: 0, y: 14 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
-};
 
 const FONTS = 'https://fonts.bunny.net/css?family=cormorant-garamond:500,600|inter:400,500,600,700';
 
@@ -35,7 +31,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
     );
 
     return (
-        <ThemeContext.Provider value={{ name: 'coppers', motion, root }}>
+        <ThemeContext.Provider value={{ name: 'coppers', motion: coppersRevealMotion, motionSet: coppersMotion, root }}>
             <MotionConfig reducedMotion="user">
                 <Head>
                     <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -45,6 +41,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                 <div
                     ref={setRoot}
                     data-theme="coppers"
+                    style={coppersMotionVars}
                     className="bg-store-bg font-store-body text-store-text flex min-h-screen flex-col antialiased"
                 >
                     <a
@@ -54,7 +51,10 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                         Saltar al contenido
                     </a>
 
-                    <header className="border-store-border bg-store-bg/95 sticky top-0 z-30 border-b backdrop-blur">
+                    <RetractingHeader
+                        className="border-store-border bg-store-bg/95 sticky top-0 z-30 border-b backdrop-blur"
+                        pinned={searchOpen || menuOpen}
+                    >
                         <Container className="grid h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4 lg:h-24">
                             <div className="flex items-center">
                                 <button
@@ -101,7 +101,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                                 </ul>
                             </Container>
                         </nav>
-                    </header>
+                    </RetractingHeader>
 
                     <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} container={root} title="Menú de categorías">
                         <p className="store-heading mt-2 text-3xl">{store.name}</p>
@@ -123,7 +123,7 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                     </MobileMenu>
 
                     <main id="contenido" className="flex-1">
-                        {children}
+                        <PageFade>{children}</PageFade>
                     </main>
 
                     <footer className="border-store-border bg-store-surface border-t">

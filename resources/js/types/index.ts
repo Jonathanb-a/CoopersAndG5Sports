@@ -70,6 +70,7 @@ export interface StoreProduct {
     brand: string | null;
     price: string;
     image_url: string | null;
+    second_image_url: string | null;
     tag: ProductTagKind | null;
 }
 

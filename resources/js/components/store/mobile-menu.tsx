@@ -23,6 +23,7 @@ export function MobileMenu({ open, onOpenChange, container, title, side = 'left'
                 <Dialog.Overlay className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-40 bg-black/50" />
                 <Dialog.Content
                     aria-describedby={undefined}
+                    data-drawer=""
                     className={cn(
                         'bg-store-bg text-store-text fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col p-6 shadow-xl outline-none',
                         'data-[state=closed]:animate-out data-[state=open]:animate-in',

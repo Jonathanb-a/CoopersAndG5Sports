@@ -149,6 +149,7 @@ function CatalogContent({ category, products, pagination, filters, options }: Ca
                                         href={`/producto/${product.slug}`}
                                         price={product.price}
                                         imageUrl={product.image_url}
+                                        secondImageUrl={product.second_image_url}
                                         tag={product.tag}
                                     />
                                 </ScrollReveal>

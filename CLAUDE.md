@@ -331,24 +331,39 @@ Sensación: cancha y calle, energía, grafiti.
 - Índices de orders para el dashboard: (store_id, status, paid_at) y
   (store_id, created_at).
 
-## Animaciones (fase 6.1)
+## Animaciones (fases 6.1 y 6.2)
 - Paquete: motion (motion/react). Cada tema define su propio MotionSet en
   resources/js/Themes/{tema}/motion.ts y lo entrega en el contexto del tema
-  (motionSet). Los componentes compartidos solo leen esos valores (useMotion);
-  un tema sin motionSet no recibe estas animaciones. Hoy solo Copper's lo tiene;
-  G5 conserva su animación de entrada de siempre (Reveal) y nada más.
-- Copper's (Themes/coppers/motion.ts, único lugar con los números): entradas de
-  300 a 500 ms, ease-out suave, desplazamientos de 8 a 16 px, nada que rebote.
-  Solo estas animaciones: aparición al hacer scroll en secciones y rejillas (con
-  escalonado corto y topado), tarjeta de producto (zoom leve de la foto y cambio a
-  la segunda foto, second_image_url), encabezado que se recoge al bajar y aparece
-  al subir, cajón/mini carrito deslizante (CSS con variables --motion-* sacadas de
-  motion.ts), confirmación "Agregado" en el botón de agregar y fundido breve entre
-  páginas. No se agregan animaciones decorativas fuera de esta lista.
+  (motionSet). Los componentes compartidos solo leen esos valores (useMotion) y no
+  llevan números propios; un tema sin motionSet no recibe estas animaciones. Las
+  secciones opcionales del MotionSet (tag, heading, banner, button, backdrop y los
+  extras de card y addToCart) son del carácter de un tema: si no las define, ese
+  efecto no existe (Copper's no las tiene).
+- Base común (los dos temas): aparición al hacer scroll en secciones y rejillas con
+  escalonado topado, tarjeta de producto (zoom de la foto y cambio a la segunda
+  foto, second_image_url), encabezado que se recoge al bajar y aparece al subir,
+  cajón/mini carrito deslizante (CSS con variables --motion-* sacadas de motion.ts),
+  confirmación "Agregado" en el botón de agregar y fundido breve entre páginas.
+- Copper's (Themes/coppers/motion.ts): fino. Entradas de 300 a 500 ms, ease-out
+  suave, desplazamientos de 8 a 16 px, nada que rebote, escalonado de 60 ms.
+- Sports G5 (Themes/g5/motion.ts): enérgico. Entradas de 180 a 320 ms, easing con
+  empuje corto (overshoot de ~1.25), desplazamientos de 16 a 32 px, escalonado de
+  40 ms. Además, solo en G5: tarjeta con leve inclinación y elevación, foto que se
+  acerca más (1.08) y etiqueta tipo calcomanía que se endereza; etiquetas con
+  entrada tipo sello (scale y rotate, CSS .g5-stamp); títulos de sección con corte
+  (suben desde abajo de su caja; los bloques que los envuelven llevan `bare`);
+  banner del home con entrada más dinámica (Reveal emphasis="banner"); pulso del
+  botón principal al pasar el cursor (.store-pulse); "Agregado" con pop de escala;
+  y deriva lenta de las manchas de pintura del hero (.store-paint-drift, una sola
+  capa ::before, solo transform; el pie no se mueve).
 - Reglas: respetar prefers-reduced-motion (sin movimiento: no se envuelve nada ni
-  hay hover, solo cambios instantáneos); animar solo opacity y transform; nada que
-  provoque reflujo ni saltos de layout (CLS); en celular, versión ligera (menos
-  desplazamiento, sin escalonado ni hover); ninguna animación en checkout, carrito,
-  pedidos, "Mi cuenta", login, registro ni recuperar contraseña (quietPaths).
-- Pruebas del frontend: vitest (npm test, resources/js/**/*.test.tsx), con
-  movimiento reducido, celular, rutas de pagar y G5 sin cambios.
+  hay hover, solo cambios instantáneos); animar solo opacity y transform (y las
+  propiedades scale y rotate); nada que provoque reflujo ni saltos de layout (CLS);
+  sin animar sombras ni filtros nuevos y con un solo elemento de fondo en
+  movimiento; en celular, versión ligera (menos desplazamiento, sin escalonado, sin
+  hover, sin sello, sin banner escalado y sin movimiento continuo de fondo);
+  ninguna animación en checkout, carrito, pedidos, "Mi cuenta", login, registro ni
+  recuperar contraseña (quietPaths). No se agregan animaciones fuera de esta lista.
+- Pruebas del frontend: vitest (npm test, resources/js/**/*.test.tsx), por tema:
+  rangos de los valores, movimiento reducido, celular, rutas de pagar, el otro tema
+  sin cambios y el render del layout completo.

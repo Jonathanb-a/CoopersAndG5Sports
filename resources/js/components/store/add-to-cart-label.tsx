@@ -37,15 +37,19 @@ export function AddToCartLabel({ soldOut, adding, added }: AddToCartLabelProps) 
     }
 
     if (added && motionSet) {
-        const fade = active && !active.reduced ? { duration: active.set.addToCart.fade, ease: active.set.ease } : { duration: 0 };
+        const moving = active && !active.reduced;
+        const fade = moving ? { duration: active.set.addToCart.fade, ease: active.set.ease } : { duration: 0 };
+        // Con «pop» (G5) llega con un pequeño salto de escala; sin él (Copper's) solo cambia la opacidad.
+        const pop = moving ? active.set.addToCart.pop : undefined;
+        const enter = pop !== undefined ? { opacity: 0, scale: pop } : { opacity: 0 };
 
         return (
             <motion.span
                 key="added"
                 role="status"
                 className="inline-flex items-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={enter}
+                animate={pop !== undefined ? { opacity: 1, scale: 1 } : { opacity: 1 }}
                 transition={fade}
             >
                 <Check className="size-5" aria-hidden="true" />

@@ -30,6 +30,8 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
     // Solo con hover real (no en celular) y sin movimiento reducido: el zoom y la segunda foto son del tema.
     const hover = motionSet && active && !active.reduced && !active.mobile ? motionSet : null;
     const second = hover && imageUrl && secondImageUrl ? secondImageUrl : null;
+    // Extras del carácter del tema (G5): inclinación y elevación de la tarjeta, y la etiqueta que se endereza.
+    const { tilt, lift, tagStraighten } = hover?.card ?? {};
 
     const body = (
         <>
@@ -72,7 +74,17 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
                         {name.charAt(0)}
                     </div>
                 )}
-                {tag && <Tag kind={tag} className="absolute top-2 left-2" />}
+                {tag && (
+                    <Tag
+                        kind={tag}
+                        className={cn('absolute top-2 left-2', tagStraighten !== undefined && 'group-hover/card:rotate-(--tag-undo)')}
+                        style={
+                            tagStraighten !== undefined && hover
+                                ? ({ '--tag-undo': `${tagStraighten}deg`, ...cssTransition(hover, hover.card.duration, 'rotate') } as CSSProperties)
+                                : undefined
+                        }
+                    />
+                )}
             </div>
             <div className="border-store-border flex flex-1 flex-col border-t p-3 sm:p-4">
                 {brand && <p className="font-store-body text-store-muted truncate text-xs font-semibold tracking-wider uppercase">{brand}</p>}
@@ -83,7 +95,24 @@ export function ProductCard({ name, price, brand, imageUrl, secondImageUrl, tag,
     );
 
     return (
-        <article className={cn('group/card store-surface store-transition store-lift flex h-full flex-col overflow-hidden', className)}>
+        <article
+            className={cn(
+                'group/card store-surface store-transition store-lift flex h-full flex-col overflow-hidden',
+                tilt !== undefined && 'group-hover/card:rotate-(--card-tilt)',
+                lift !== undefined && 'group-hover/card:-translate-y-(--card-lift)',
+                className,
+            )}
+            style={
+                tilt !== undefined || lift !== undefined
+                    ? ({
+                          '--card-tilt': `${tilt ?? 0}deg`,
+                          '--card-lift': `${lift ?? 0}px`,
+                          // Se suman a las que ya anima el tema, sin quitarlas.
+                          transitionProperty: 'color, background-color, border-color, box-shadow, transform, opacity, rotate, translate',
+                      } as CSSProperties)
+                    : undefined
+            }
+        >
             {href ? (
                 <Link
                     href={href}

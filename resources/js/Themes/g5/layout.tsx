@@ -1,18 +1,14 @@
 import { Container, HeaderActions, MobileMenu, SearchField, StoreLogo, WhatsAppLink } from '@/components/store';
+import { PageFade } from '@/components/store/page-fade';
+import { RetractingHeader } from '@/components/store/retracting-header';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { MotionConfig } from 'motion/react';
 import { type ReactNode, useState } from 'react';
-import { ThemeContext, type ThemeMotion } from '../context';
+import { ThemeContext } from '../context';
+import { g5Motion, g5MotionVars, g5RevealMotion } from './motion';
 import './theme.css';
-
-// Entradas rápidas y con empuje.
-const motion: ThemeMotion = {
-    initial: { opacity: 0, x: -32 },
-    animate: { opacity: 1, x: 0 },
-    transition: { duration: 0.28, ease: [0.34, 1.56, 0.64, 1] },
-};
 
 const FONTS = 'https://fonts.bunny.net/css?family=anton:400|barlow:400,500,600,700';
 
@@ -35,14 +31,19 @@ export default function G5Layout({ children }: { children: ReactNode }) {
     );
 
     return (
-        <ThemeContext.Provider value={{ name: 'g5', motion, root }}>
+        <ThemeContext.Provider value={{ name: 'g5', motion: g5RevealMotion, motionSet: g5Motion, root }}>
             <MotionConfig reducedMotion="user">
                 <Head>
                     <link rel="preconnect" href="https://fonts.bunny.net" />
                     <link rel="stylesheet" href={FONTS} />
                 </Head>
 
-                <div ref={setRoot} data-theme="g5" className="bg-store-bg font-store-body text-store-text flex min-h-screen flex-col antialiased">
+                <div
+                    ref={setRoot}
+                    data-theme="g5"
+                    style={g5MotionVars}
+                    className="bg-store-bg font-store-body text-store-text flex min-h-screen flex-col antialiased"
+                >
                     <a
                         href="#contenido"
                         className="focus:bg-store-accent focus:text-store-action-text sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:font-bold"
@@ -50,7 +51,10 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                         Saltar al contenido
                     </a>
 
-                    <header className="border-store-accent bg-store-surface sticky top-0 z-30 border-b-[length:var(--store-border-width)]">
+                    <RetractingHeader
+                        className="border-store-accent bg-store-surface sticky top-0 z-30 border-b-[length:var(--store-border-width)]"
+                        pinned={searchOpen || menuOpen}
+                    >
                         <Container className="flex min-h-16 items-center gap-3 py-2 lg:min-h-20 lg:gap-6">
                             <button
                                 type="button"
@@ -90,7 +94,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                                 </Container>
                             </div>
                         )}
-                    </header>
+                    </RetractingHeader>
 
                     <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} container={root} title="Menú de categorías" className="bg-store-surface">
                         <p className="store-heading text-store-accent mt-2 text-4xl">{store.name}</p>
@@ -114,7 +118,7 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                     </MobileMenu>
 
                     <main id="contenido" className="flex-1">
-                        {children}
+                        <PageFade>{children}</PageFade>
                     </main>
 
                     <footer className="store-paint border-store-accent bg-store-surface border-t-[length:var(--store-border-width)]">

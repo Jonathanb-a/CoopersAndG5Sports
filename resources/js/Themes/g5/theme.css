@@ -53,9 +53,99 @@
 }
 
 /* Manchas de pintura como fondo de secciones. */
-[data-theme='g5'] .store-paint {
-    background-image:
+[data-theme='g5'] {
+    --g5-paint:
         radial-gradient(40% 55% at 12% 20%, rgb(163 44 224 / 0.35), transparent 70%),
         radial-gradient(35% 45% at 88% 15%, rgb(53 240 238 / 0.22), transparent 70%),
         radial-gradient(30% 40% at 70% 95%, rgb(255 214 0 / 0.16), transparent 70%);
+}
+
+[data-theme='g5'] .store-paint {
+    background-image: var(--g5-paint);
+}
+
+/*
+ * Movimiento de G5. Todo sale de Themes/g5/motion.ts (variables --motion-*) y solo anima transform,
+ * scale, rotate y opacity. Nada de esto corre con prefers-reduced-motion.
+ */
+
+/* Cajón (menú y mini carrito): entrada deslizante rápida. */
+[data-theme='g5'] [data-drawer] {
+    animation-duration: var(--motion-drawer-duration);
+    animation-timing-function: var(--motion-ease);
+}
+
+/* Etiquetas: entrada tipo sello. Las propiedades scale y rotate se suman a la inclinación fija del tema. */
+@keyframes g5-stamp {
+    from {
+        opacity: 0;
+        scale: var(--motion-stamp-scale);
+        rotate: var(--motion-stamp-rotate);
+    }
+
+    to {
+        opacity: 1;
+        scale: 1;
+        rotate: 0deg;
+    }
+}
+
+[data-theme='g5'] .g5-stamp {
+    /* backwards: al terminar suelta la propiedad, para que el hover de la tarjeta pueda enderezarla. */
+    animation: g5-stamp var(--motion-stamp-duration) var(--motion-ease) backwards;
+}
+
+/* Botón principal: pulso breve al pasar el cursor (solo con cursor y en pantalla grande). */
+@keyframes g5-pulse {
+    0%,
+    100% {
+        scale: 1;
+    }
+
+    50% {
+        scale: var(--motion-pulse-scale);
+    }
+}
+
+@media (hover: hover) and (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    [data-theme='g5'] .store-pulse:hover:not(:disabled) {
+        animation: g5-pulse var(--motion-pulse-duration) var(--motion-ease) 1;
+    }
+}
+
+/*
+ * Manchas del hero del inicio: las mismas de .store-paint, pero en una capa propia (::before) que se
+ * mueve muy lento con transform. Una sola capa, sin filtros ni repintado; solo en pantalla grande y
+ * sin movimiento reducido.
+ */
+[data-theme='g5'] .store-paint-drift {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image: none;
+}
+
+[data-theme='g5'] .store-paint-drift::before {
+    content: '';
+    position: absolute;
+    inset: -8%;
+    z-index: -1;
+    background-image: var(--g5-paint);
+}
+
+@keyframes g5-drift {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(var(--motion-drift-x), var(--motion-drift-y), 0);
+    }
+}
+
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    [data-theme='g5'] .store-paint-drift::before {
+        animation: g5-drift var(--motion-drift-duration) ease-in-out infinite alternate;
+        will-change: transform;
+    }
 }

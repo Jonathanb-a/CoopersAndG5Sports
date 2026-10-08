@@ -27,11 +27,13 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
                 <>
                     <h1 className="sr-only">Bienvenido a {store.name}</h1>
                     <Container className="pt-4 sm:pt-6">
-                        <BannerCarousel banners={banners} />
+                        <Reveal emphasis="banner">
+                            <BannerCarousel banners={banners} />
+                        </Reveal>
                     </Container>
                 </>
             ) : (
-                <section className="store-paint">
+                <section className="store-paint store-paint-drift">
                     <Container className="py-20 text-center sm:py-28 lg:py-40">
                         <Reveal>
                             <p className="text-store-muted text-sm font-semibold tracking-[0.2em] uppercase">Tienda en línea</p>
@@ -45,7 +47,7 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
 
             {categoryCards.length > 0 && (
                 <Container as="section" className="py-12 sm:py-16 lg:py-24" aria-labelledby="categorias">
-                    <ScrollReveal>
+                    <ScrollReveal bare>
                         <SectionHeading id="categorias" title="Compra por categoría" />
                     </ScrollReveal>
                     <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
@@ -60,7 +62,7 @@ export default function Home({ banners, categoryCards, newest, about }: HomeProp
 
             {newest.length > 0 && (
                 <Container as="section" className="py-12 sm:py-16 lg:py-24">
-                    <ScrollReveal>
+                    <ScrollReveal bare>
                         <SectionHeading title="Lo más nuevo" subtitle="Lo último que llegó a la tienda." />
                     </ScrollReveal>
                     <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">

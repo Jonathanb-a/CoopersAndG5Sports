@@ -1,5 +1,8 @@
 import { cn } from '@/lib/utils';
-import { type ComponentProps } from 'react';
+import { useTheme } from '@/Themes/context';
+import { useMotion } from '@/Themes/use-motion';
+import { useInView } from 'motion/react';
+import { type ComponentProps, useRef } from 'react';
 
 export type TagKind = 'sold-out' | 'backorder' | 'last-piece';
 
@@ -17,15 +20,31 @@ const styles: Record<TagKind, string> = {
 
 type TagProps = ComponentProps<'span'> & { kind: TagKind };
 
-/** Etiqueta de producto. Sin texto propio muestra la etiqueta de la tienda para ese tipo. */
-export function Tag({ kind, className, children, ...props }: TagProps) {
+/**
+ * Etiqueta de producto. Sin texto propio muestra la etiqueta de la tienda para ese tipo. En un tema
+ * con sello (G5) entra como calcomanía: llega con escala y una rotación corta al aparecer en pantalla
+ * (CSS con las propiedades scale y rotate, que se suman a la inclinación fija del tema).
+ */
+export function Tag({ kind, className, children, style, ...props }: TagProps) {
+    const { motionSet } = useTheme();
+    const active = useMotion();
+    const ref = useRef<HTMLSpanElement>(null);
+    const seen = useInView(ref, { once: true, amount: 0.6 });
+
+    // Sin movimiento reducido ni celular: en celular la etiqueta aparece ya puesta.
+    const stamp = Boolean(motionSet?.tag && active && !active.reduced && !active.mobile);
+
     return (
         <span
+            ref={ref}
+            data-stamp={stamp ? (seen ? 'in' : 'pending') : undefined}
             className={cn(
                 'store-tag-shape rounded-store font-store-body inline-block px-2 py-0.5 text-xs font-bold tracking-wide uppercase',
                 styles[kind],
+                stamp && seen && 'g5-stamp',
                 className,
             )}
+            style={stamp && !seen ? { ...style, opacity: 0 } : style}
             {...props}
         >
             {children ?? labels[kind]}

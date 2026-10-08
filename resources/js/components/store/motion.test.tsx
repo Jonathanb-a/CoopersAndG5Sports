@@ -39,7 +39,7 @@ function coppers(children: ReactNode) {
     );
 }
 
-function g5(children: ReactNode) {
+function plain(children: ReactNode) {
     return <ThemeContext.Provider value={{ name: 'g5', motion: g5Motion, root: null }}>{children}</ThemeContext.Provider>;
 }
 
@@ -133,10 +133,10 @@ describe('Reveal en Copper', () => {
     });
 });
 
-describe('temas sin movimiento propio (G5)', () => {
+describe('temas sin MotionSet', () => {
     it('conservan su animación de siempre', () => {
         render(
-            g5(
+            plain(
                 <Reveal>
                     <p>Hola</p>
                 </Reveal>,
@@ -147,7 +147,7 @@ describe('temas sin movimiento propio (G5)', () => {
     });
 
     it('la tarjeta no agrega zoom ni segunda foto', () => {
-        const { container } = render(g5(<ProductCard name="Tenis" price="100.00" imageUrl="/a.jpg" secondImageUrl="/b.jpg" />));
+        const { container } = render(plain(<ProductCard name="Tenis" price="100.00" imageUrl="/a.jpg" secondImageUrl="/b.jpg" />));
 
         expect(container.querySelector('[data-photo="second"]')).toBeNull();
         expect(container.innerHTML).not.toContain('card-zoom');
@@ -263,7 +263,7 @@ describe('botón de agregar al carrito', () => {
     });
 
     it('G5 queda con su texto de siempre', () => {
-        render(g5(<AddToCartLabel soldOut={false} adding={false} added />));
+        render(plain(<AddToCartLabel soldOut={false} adding={false} added />));
 
         expect(screen.queryByRole('status')).toBeNull();
         expect(screen.getByText('Agregar al carrito')).toBeTruthy();

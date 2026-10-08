@@ -218,7 +218,7 @@ function ProductContent({ product, related, whatsapp }: ProductPageProps) {
 
             {related.length > 0 && (
                 <Container as="section" className="py-10 sm:py-14 lg:py-20" aria-labelledby="relacionados">
-                    <ScrollReveal>
+                    <ScrollReveal bare>
                         <SectionHeading id="relacionados" title="También te puede gustar" />
                     </ScrollReveal>
                     <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">

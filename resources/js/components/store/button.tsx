@@ -12,7 +12,7 @@ export const buttonVariants = cva(
     {
         variants: {
             variant: {
-                primary: 'bg-store-action text-store-action-text shadow-(--store-shadow) hover:bg-store-action-hover',
+                primary: 'store-pulse bg-store-action text-store-action-text shadow-(--store-shadow) hover:bg-store-action-hover',
                 outline: 'border-store-text text-store-text hover:bg-store-text hover:text-store-bg',
                 ghost: 'text-store-text hover:bg-store-surface',
             },

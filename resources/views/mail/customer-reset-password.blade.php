@@ -14,7 +14,7 @@
                 <tr>
                     <td align="center" style="padding:28px 32px 8px;">
                         @if ($logo)
-                            <img src="{{ $logo }}" alt="{{ $store }}" height="40" style="height:40px;width:auto;border:0;">
+                            <span style="display:inline-block;padding:8px 12px;border-radius:{{ $theme['radius'] }};background:{{ $theme['logo_bg'] }};"><img src="{{ $logo }}" alt="{{ $store }}" height="80" style="display:block;height:80px;width:auto;border:0;"></span>
                         @else
                             <span style="font-family:{!! $theme['heading_font'] !!};font-size:28px;font-weight:{{ $theme['heading_weight'] }};text-transform:{{ $theme['heading_transform'] }};color:{{ $theme['text'] }};">{{ $store }}</span>
                         @endif

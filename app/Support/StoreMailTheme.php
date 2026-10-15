@@ -23,6 +23,8 @@ class StoreMailTheme
             'heading_transform' => 'none',
             'heading_weight' => '600',
             'body_font' => 'Inter, Arial, Helvetica, sans-serif',
+            // El logo va directo sobre la tarjeta blanca.
+            'logo_bg' => 'transparent',
         ],
         'g5' => [
             'bg' => '#0E0E10',
@@ -37,6 +39,8 @@ class StoreMailTheme
             'heading_transform' => 'uppercase',
             'heading_weight' => '700',
             'body_font' => 'Barlow, Arial, Helvetica, sans-serif',
+            // Las letras del logo son oscuras: sobre la tarjeta negra van en un recuadro claro.
+            'logo_bg' => '#F5F5F5',
         ],
     ];
 

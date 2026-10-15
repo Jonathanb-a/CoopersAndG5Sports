@@ -10,10 +10,11 @@ interface StoreLogoProps {
 
 /**
  * Logo de la tienda (public/brand/{theme}/logo.png). Mientras no exista el archivo muestra el
- * nombre de la tienda con la tipografía de títulos del tema.
+ * nombre de la tienda con la tipografía de títulos del tema. Lleva ancho y alto reales (sin saltos de
+ * layout); el tamaño y el contorno de cada tienda salen del tema (clase .store-logo).
  */
 export function StoreLogo({ theme, name, className, textClassName }: StoreLogoProps) {
-    const [logo, setLogo] = useState<string | null>(null);
+    const [logo, setLogo] = useState<{ src: string; width: number; height: number } | null>(null);
 
     useEffect(() => {
         if (!theme) {
@@ -22,7 +23,7 @@ export function StoreLogo({ theme, name, className, textClassName }: StoreLogoPr
 
         const src = `/brand/${theme}/logo.png`;
         const image = new Image();
-        image.onload = () => setLogo(src);
+        image.onload = () => setLogo({ src, width: image.naturalWidth, height: image.naturalHeight });
         image.src = src;
 
         return () => {
@@ -31,7 +32,7 @@ export function StoreLogo({ theme, name, className, textClassName }: StoreLogoPr
     }, [theme]);
 
     if (logo) {
-        return <img src={logo} alt={name} className={cn('h-8 w-auto lg:h-9', className)} />;
+        return <img src={logo.src} alt={name} width={logo.width} height={logo.height} className={cn('store-logo w-auto', className)} />;
     }
 
     return <span className={cn('store-heading', textClassName)}>{name}</span>;

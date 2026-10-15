@@ -68,3 +68,14 @@
         animation: none;
     }
 }
+
+/* Logo del encabezado: el perro y el nombre necesitan alto para leerse. */
+[data-theme='coppers'] .store-logo {
+    height: 3.25rem;
+}
+
+@media (min-width: 1024px) {
+    [data-theme='coppers'] .store-logo {
+        height: 4.75rem;
+    }
+}

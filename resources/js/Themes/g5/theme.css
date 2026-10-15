@@ -163,3 +163,18 @@
         will-change: transform;
     }
 }
+
+/*
+ * Logo del encabezado. Sus letras son gris oscuro y el encabezado es casi negro: un contorno blanco
+ * tipo calcomanía (drop-shadow fijo, no animado) las hace legibles sin tocar el archivo.
+ */
+[data-theme='g5'] .store-logo {
+    height: 3rem;
+    filter: drop-shadow(1px 0 0 #f5f5f5) drop-shadow(-1px 0 0 #f5f5f5) drop-shadow(0 1px 0 #f5f5f5) drop-shadow(0 -1px 0 #f5f5f5);
+}
+
+@media (min-width: 1024px) {
+    [data-theme='g5'] .store-logo {
+        height: 4rem;
+    }
+}

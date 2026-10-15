@@ -97,7 +97,10 @@ Sensación: cancha y calle, energía, grafiti.
 
 ### Ambos temas
 - Contraste mínimo AA en textos y botones.
-- Los logos van en public/brand/{theme}/logo.png.
+- Los logos van en public/brand/{theme}/logo.png (PNG transparente). En el
+  encabezado su alto sale del tema (.store-logo): Copper's 52 px / 76 px en
+  escritorio; G5 48 px / 64 px con contorno blanco fijo (sus letras son oscuras).
+  En el correo, G5 lo pone sobre un recuadro claro (StoreMailTheme logo_bg).
 
 ## Decisiones de la fase 4
 - Ver la tienda no requiere cuenta. Comprar sí: el checkout exige iniciar sesión.

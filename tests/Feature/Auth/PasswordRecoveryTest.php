@@ -277,8 +277,8 @@ class PasswordRecoveryTest extends CustomerAuthTestCase
         }
         $this->assertStringNotContainsString('#35F0EE', $copperHtml);
 
-        // Sin archivo de logo en public/brand, el correo muestra el nombre de la tienda.
-        $this->assertNull(StoreMailTheme::logoUrl('g5', 'http://g5.localhost'));
+        // Con logo en public/brand se usa ese archivo, en el dominio de la tienda; un tema desconocido no tiene.
+        $this->assertSame(is_file(public_path('brand/g5/logo.png')) ? 'http://g5.localhost/brand/g5/logo.png' : null, StoreMailTheme::logoUrl('g5', 'http://g5.localhost'));
         $this->assertNull(StoreMailTheme::logoUrl('desconocido', 'http://g5.localhost'));
     }
 

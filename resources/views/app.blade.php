@@ -9,20 +9,24 @@
         @isset($meta)
             {{-- Para compartir en redes: los rastreadores leen el HTML, no ejecutan JavaScript. --}}
             <meta name="description" content="{{ $meta['description'] }}">
-            <meta property="og:type" content="product">
+            <meta property="og:type" content="{{ $meta['type'] ?? 'product' }}">
             <meta property="og:locale" content="es_MX">
             <meta property="og:site_name" content="{{ $meta['site_name'] }}">
             <meta property="og:title" content="{{ $meta['title'] }}">
             <meta property="og:description" content="{{ $meta['description'] }}">
-            <meta property="og:url" content="{{ $meta['url'] }}">
-            @if ($meta['image'])
+            @if (! empty($meta['url']))
+                <meta property="og:url" content="{{ $meta['url'] }}">
+            @endif
+            @if (! empty($meta['image']))
                 <meta property="og:image" content="{{ $meta['image'] }}">
                 <meta name="twitter:card" content="summary_large_image">
                 <meta name="twitter:image" content="{{ $meta['image'] }}">
             @endif
             <meta name="twitter:title" content="{{ $meta['title'] }}">
             <meta name="twitter:description" content="{{ $meta['description'] }}">
-            <link rel="canonical" href="{{ $meta['url'] }}">
+            @if (! empty($meta['url']))
+                <link rel="canonical" href="{{ $meta['url'] }}">
+            @endif
         @endisset
 
         <link rel="preconnect" href="https://fonts.bunny.net">

@@ -2,6 +2,7 @@ import { AuthCard } from '@/components/store/auth-card';
 import { StoreButton } from '@/components/store/button';
 import { Field } from '@/components/store/form';
 import { GoogleButton } from '@/components/store/google-button';
+import { LegalConsent } from '@/components/store/legal-consent';
 import StoreLayout from '@/Themes';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
@@ -78,6 +79,7 @@ export default function Register() {
                         error={form.errors.password_confirmation}
                     />
 
+                    <LegalConsent />
                     <StoreButton type="submit" size="lg" className="w-full" disabled={form.processing}>
                         {form.processing ? 'Creando cuenta…' : 'Crear cuenta'}
                     </StoreButton>

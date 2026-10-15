@@ -137,5 +137,8 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
+
+        // Borradores de las páginas de contenido y legales (no pisa las que ya existan).
+        $this->call(StorePagesSeeder::class);
     }
 }

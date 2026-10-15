@@ -2,6 +2,7 @@ import { StoreButton } from '@/components/store/button';
 import { Container } from '@/components/store/container';
 import { PickupInfo, type PickupInfoData } from '@/components/store/delivery-info';
 import { Field, TextAreaField } from '@/components/store/form';
+import { LegalConsent } from '@/components/store/legal-consent';
 import { Reveal } from '@/components/store/reveal';
 import { formatMoney } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -364,6 +365,7 @@ function CheckoutContent({ cart, deliveryOptions, pickup, customerName, phone, r
                     >
                         {form.processing ? 'Apartando…' : 'Apartar pedido'}
                     </StoreButton>
+                    <LegalConsent className="mt-4" />
                     <p className="text-store-muted mt-3 text-xs leading-relaxed">
                         {isCash
                             ? 'Pagas en efectivo al recibir o recoger tu pedido. Apartamos tus piezas hasta ese momento.'

@@ -14,6 +14,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderConfirmationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreHomeController;
+use App\Http\Controllers\StorePageController;
 use App\Http\Middleware\AuthenticateCustomerSession;
 use App\Http\Middleware\ResolveStore;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,7 @@ Route::middleware([ResolveStore::class, AuthenticateCustomerSession::class])->gr
     Route::get('catalogo', CatalogController::class)->name('catalog');
     Route::get('categoria/{slug}', CatalogController::class)->name('category');
     Route::get('producto/{slug}', ProductController::class)->name('product');
+    Route::get('pagina/{slug}', StorePageController::class)->name('store-page');
 
     // Carrito en la sesión (no pide cuenta). Solo recibe ids y cantidades.
     Route::get('carrito', [CartController::class, 'show'])->name('cart.show');
@@ -73,4 +75,8 @@ Route::middleware([ResolveStore::class, AuthenticateCustomerSession::class])->gr
         Route::put('mi-cuenta/direcciones/{address}', [AddressController::class, 'update'])->whereNumber('address')->name('addresses.update');
         Route::delete('mi-cuenta/direcciones/{address}', [AddressController::class, 'destroy'])->whereNumber('address')->name('addresses.destroy');
     });
+
+    // Cualquier otra dirección del dominio de una tienda: 404 con el diseño de la tienda (pasa por la
+    // sesión y ResolveStore, así la página de error tiene encabezado, carrito y cuenta).
+    Route::fallback(fn () => abort(404));
 });

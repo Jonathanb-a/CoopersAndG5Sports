@@ -107,7 +107,22 @@ export interface SharedData {
     auth: Auth;
     googleEnabled: boolean;
     miniCart: MiniCart;
+    /** Pie de página: páginas publicadas y datos de la tienda. */
+    footer?: StoreFooter;
     [key: string]: unknown;
+}
+
+export interface StorePageLink {
+    slug: string;
+    title: string;
+    url: string;
+}
+
+export interface StoreFooter {
+    pages: StorePageLink[];
+    address: string | null;
+    hours: string | null;
+    map_url: string | null;
 }
 
 export interface User {

@@ -1,4 +1,5 @@
 import { Container, HeaderActions, MobileMenu, SearchField, StoreLogo, WhatsAppLink } from '@/components/store';
+import { FooterDetails } from '@/components/store/footer-details';
 import { PageFade } from '@/components/store/page-fade';
 import { RetractingHeader } from '@/components/store/retracting-header';
 import { type SharedData } from '@/types';
@@ -133,6 +134,13 @@ export default function G5Layout({ children }: { children: ReactNode }) {
                                     className="store-transition store-lift bg-store-action text-store-action-text hover:bg-store-action-hover inline-flex h-12 items-center gap-2 border-[length:var(--store-border-width)] border-transparent px-6 font-bold shadow-(--store-shadow)"
                                 />
                             </div>
+                        </Container>
+                        <Container className="pb-10">
+                            <FooterDetails
+                                showWhatsApp={false}
+                                headingClassName="store-heading text-store-accent text-xl"
+                                linkClassName="font-semibold hover:text-store-link underline-offset-4 hover:underline"
+                            />
                         </Container>
                         <div className="border-store-border border-t-2">
                             <Container className="text-store-muted py-4 text-sm">

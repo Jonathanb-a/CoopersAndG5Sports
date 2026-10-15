@@ -436,3 +436,40 @@ Sensación: cancha y calle, energía, grafiti.
   - Carrito: total estimado y "Continuar con la compra". Vacío, no se muestra.
   - Solo anima su entrada (opacity y transform, valores del tema); nada con
     prefers-reduced-motion ni en el carrito, que es ruta sin animaciones.
+
+## Páginas de contenido, legales y errores (fase 6.4)
+- Tabla store_pages (store_id, slug, title, body, internal_note, is_published),
+  modelo StorePage con BelongsToStore y recurso de Filament en el tenant. El
+  owner y el staff de la tienda editan (RichEditor: títulos, listas, negritas,
+  enlaces); solo el owner publica o despublica (el servidor lo impone aunque se
+  mande el campo por Livewire). internal_note es solo para el personal (por
+  ejemplo "BORRADOR: revisar con el cliente antes de publicar") y nunca sale en
+  la tienda.
+- Slugs fijos (StorePage::PAGES, también el orden del pie): quienes-somos,
+  contacto, preguntas-frecuentes, envios-y-entregas, cambios-y-devoluciones,
+  aviso-de-privacidad, terminos-y-condiciones. Se ven en /pagina/{slug}; una no
+  publicada o de otra tienda responde 404.
+- HTML saneado con App\Support\SafeHtml (lista cerrada: p, h2-h4, listas,
+  negritas, cursivas, citas, hr y enlaces http(s)/mailto/tel/relativos con rel
+  forzado; sin scripts, iframes, imágenes, style, class ni on*) al guardar y otra
+  vez al mostrar. El aspecto lo pone .store-prose con las variables del tema.
+- StorePagesSeeder (lo llama DatabaseSeeder): borradores por tienda con el tono
+  de la marca y datos reales (nombre, WhatsApp, dirección, horario, plazos de
+  apartado, efectivo, entrega local). Lo pendiente del dueño va entre
+  [CORCHETES]. Todo nace sin publicar, salvo Quiénes somos y Contacto cuando no
+  les queda nada entre corchetes. Nunca pisa una página que ya exista.
+- Pie de página (FooterDetails en ambos temas): enlaces solo a páginas
+  publicadas, dirección y horario de recoger, WhatsApp. Se comparte como
+  `footer` desde ResolveStore::bind. No hay campos de redes sociales en stores.
+- Consentimiento (LegalConsent) en el registro y el checkout: "Al continuar
+  aceptas el Aviso de privacidad y los Términos y condiciones"; cada nombre es
+  enlace solo si esa página está publicada.
+- Errores 404, 419, 500 y 503 con el diseño de la tienda del dominio
+  (StoreErrorPage, desde bootstrap/app.php): página Inertia "error" con botón
+  para volver al inicio. Una ruta inexistente pasa por Route::fallback dentro
+  del grupo de la tienda. El 500 solo se reemplaza con APP_DEBUG apagado; el
+  panel /admin, Livewire, JSON y dominios sin tienda conservan la respuesta de
+  Laravel.
+- SEO: cada página de contenido y de error lleva <title> con el nombre de la
+  tienda y meta description propia (del texto de la página). Los títulos ya no
+  llevan el sufijo " - Laravel".

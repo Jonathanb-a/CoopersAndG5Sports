@@ -13,6 +13,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\StorePage;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -225,7 +226,7 @@ class PanelTenancyTest extends TestCase
 
         // Los cinco modelos con tienda de hoy; si cambia la lista, que sea a propósito.
         $this->assertEqualsCanonicalizing(
-            [Banner::class, Category::class, Coupon::class, Order::class, Product::class],
+            [Banner::class, Category::class, Coupon::class, Order::class, Product::class, StorePage::class],
             $found,
         );
     }

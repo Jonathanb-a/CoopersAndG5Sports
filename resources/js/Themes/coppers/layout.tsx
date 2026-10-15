@@ -1,4 +1,5 @@
 import { Container, HeaderActions, MobileMenu, SearchField, StoreLogo, WhatsAppLink } from '@/components/store';
+import { FooterDetails } from '@/components/store/footer-details';
 import { PageFade } from '@/components/store/page-fade';
 import { RetractingHeader } from '@/components/store/retracting-header';
 import { type SharedData } from '@/types';
@@ -128,18 +129,16 @@ export default function CoppersLayout({ children }: { children: ReactNode }) {
                     </main>
 
                     <footer className="border-store-border bg-store-surface border-t">
-                        <Container className="grid gap-10 py-14 text-center sm:grid-cols-2 sm:text-left">
+                        <Container className="grid gap-10 py-14 lg:grid-cols-[1fr_2fr]">
                             <div>
                                 <p className="store-heading text-3xl">{store.name}</p>
                                 <p className="text-store-muted mt-3 text-sm">Piezas originales, seleccionadas con cuidado.</p>
                             </div>
-                            <div className="sm:text-right">
-                                <p className="text-store-muted text-xs font-medium tracking-[0.18em] uppercase">Contacto</p>
-                                <WhatsAppLink
-                                    url={store.whatsapp_url}
-                                    className="text-store-link mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
-                                />
-                            </div>
+                            <FooterDetails
+                                className="text-sm"
+                                headingClassName="text-store-muted text-xs font-medium tracking-[0.18em] uppercase"
+                                linkClassName="text-store-link font-medium underline-offset-4 hover:underline"
+                            />
                         </Container>
                         <div className="border-store-border border-t">
                             <Container className="text-store-muted py-5 text-center text-xs">

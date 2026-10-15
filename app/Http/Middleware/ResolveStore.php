@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Category;
 use App\Models\Store;
+use App\Models\StorePage;
 use App\Services\CartService;
 use Closure;
 use Illuminate\Http\Request;
@@ -16,13 +17,30 @@ class ResolveStore
 
     public function handle(Request $request, Closure $next): Response
     {
-        $store = Store::query()
-            ->where('domain', strtolower($request->getHost()))
-            ->where('is_active', true)
-            ->first();
+        $store = self::forHost($request->getHost());
 
         abort_if($store === null, 404);
 
+        self::bind($store);
+
+        return $next($request);
+    }
+
+    /** La tienda activa de un dominio, o null. */
+    public static function forHost(string $host): ?Store
+    {
+        return Store::query()
+            ->where('domain', strtolower($host))
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Deja la tienda como la actual y comparte con Inertia lo que usa su layout. También lo usan las
+     * páginas de error, que pueden ocurrir antes de que corra este middleware.
+     */
+    public static function bind(Store $store): void
+    {
         app()->instance(self::CONTAINER_KEY, $store);
 
         Inertia::share('store', [
@@ -44,7 +62,13 @@ class ResolveStore
         // Contador y mini carrito del encabezado. Con el carrito vacío no consulta la base de datos.
         Inertia::share('miniCart', fn () => app(CartService::class)->summary($store));
 
-        return $next($request);
+        // Pie de página: páginas publicadas y datos de la tienda (los enlaces no publicados no salen).
+        Inertia::share('footer', fn () => [
+            'pages' => StorePage::publishedLinks($store),
+            'address' => trim((string) $store->pickup_address) ?: null,
+            'hours' => trim((string) $store->pickup_hours) ?: null,
+            'map_url' => trim((string) $store->pickup_map_url) ?: null,
+        ]);
     }
 
     public function terminate(Request $request, Response $response): void

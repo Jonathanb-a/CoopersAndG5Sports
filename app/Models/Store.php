@@ -90,4 +90,9 @@ class Store extends Model
     {
         return $this->hasMany(Banner::class);
     }
+
+    public function storePages(): HasMany
+    {
+        return $this->hasMany(StorePage::class);
+    }
 }

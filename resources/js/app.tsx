@@ -13,7 +13,8 @@ declare global {
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    // Cada página ya trae el nombre de la tienda en su título (por ejemplo «Contacto · Copper's»).
+    title: (title) => title || appName,
     resolve: (name) => resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx')),
     setup({ el, App, props }) {
         const root = createRoot(el);

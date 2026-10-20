@@ -29,5 +29,8 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Nunca avisar por el bot real del .env: las pruebas que lo necesitan lo configuran y usan Http::fake. -->
+        <env name="TELEGRAM_BOT_TOKEN" value=""/>
+        <env name="TELEGRAM_OWNER_CHAT_ID" value=""/>
     </php>
 </phpunit>

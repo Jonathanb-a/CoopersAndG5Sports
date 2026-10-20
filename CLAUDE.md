@@ -238,6 +238,15 @@ Sensación: cancha y calle, energía, grafiti.
   tarea grande. graphify-out/ no se sube a Git.
 - Mientras se prueba: corre solo los tests relacionados (--filter). La suite
   completa y npm run build, al final de cada tarea grande o fase.
+- Suite rápida: `php artisan test --parallel --processes=8` (unos 30 s; en serie son
+  unos 2 min). Cada proceso usa su propia base SQLite en memoria, así que no se
+  mezclan datos (paratest está en require-dev). Una clase: `php artisan test --filter=NombreDeLaClase`
+  (sin --parallel, que no rinde para pocas pruebas).
+- Las pruebas nunca esperan ni llaman a internet: tests/TestCase.php hace Sleep::fake() y
+  Http::preventStrayRequests(), y phpunit.xml deja vacíos TELEGRAM_BOT_TOKEN y
+  TELEGRAM_OWNER_CHAT_ID (el .env tiene el bot real: antes cada pedido web de prueba
+  le mandaba un aviso de verdad al dueño y tardaba ~1 s). Una prueba que necesite HTTP
+  lo declara con Http::fake(); una que dependa del tiempo, con Sleep::fake o Carbon.
 - Las migraciones nuevas se crean, pero NO se corren: el dueño del proyecto
   corre php artisan migrate en su MySQL.
 - Las tablas de arriba son una guía inicial; la fuente de verdad son las

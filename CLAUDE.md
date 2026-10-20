@@ -517,3 +517,24 @@ Sensación: cancha y calle, energía, grafiti.
   columna que obligue a cambiarla). Solo a empleados: no a otro owner ni a sí mismo
   (para eso está "Mi perfil"). La regla se vuelve a comprobar al ejecutar
   (SendPasswordLinkAction::allowed). El staff ni siquiera ve el recurso Usuarios.
+
+## Demo con túnel HTTPS (ngrok) y proxies de confianza (D2)
+- TRUSTED_PROXIES (.env, ver .env.example): a qué proxies les cree Laravel
+  X-Forwarded-For, -Port y -Proto (App\Support\TrustedProxies, llamado desde
+  bootstrap/app.php). Vacío = ninguno (lo seguro: un X-Forwarded-Proto inventado no
+  cambia nada). Local con ngrok: `*`. Producción: la IP real del proxy (varias con
+  coma, o CIDR); nunca `*` con el puerto de la app expuesto. X-Forwarded-Host NO se
+  confía: la tienda sale del Host de la petición y un encabezado no debe cambiarla.
+  Sin esto, detrás de un túnel https los enlaces (Google, correos) salen con http, la
+  cookie segura no vuelve (419) y la IP de los límites de intentos es la del túnel.
+- STORE_DOMAIN_ALIASES (.env): "dominio=slug,otro=slug". ResolveStore::forHost busca
+  primero stores.domain y, si no hay tienda, el alias (tienda activa). Sirve para una
+  demo con el dominio fijo del túnel sin borrar coppers.localhost ni tocar la base.
+  En producción el dominio real va en stores.domain, no aquí.
+- Para la demo: SESSION_DOMAIN se queda en null (cookie del dominio exacto; con otro
+  valor la cookie no viaja al túnel), SESSION_SECURE_COOKIE=true y APP_URL con el
+  dominio https del túnel. No usar `composer dev` (deja public/hot y la página pide
+  los assets a http://localhost:5173, que no existe para quien entra por el túnel):
+  `npm run build` y `php artisan serve` + `php artisan queue:listen` aparte.
+- config/services.php lleva `google.redirect`: Socialite truena con 500 si la llave
+  no existe (las pruebas con driver simulado no lo ven; TunnelProxyTest usa el real).

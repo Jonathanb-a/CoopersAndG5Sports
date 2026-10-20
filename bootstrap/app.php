@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateCustomerSession;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Support\StoreErrorPage;
+use App\Support\TrustedProxies;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Detrás de un túnel o balanceador (ngrok, Cloudflare, Nginx): solo se confía en los proxies de TRUSTED_PROXIES.
+        // Sin la variable no se confía en ninguno (ver .env.example).
+        TrustedProxies::configure($middleware, env('TRUSTED_PROXIES'));
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

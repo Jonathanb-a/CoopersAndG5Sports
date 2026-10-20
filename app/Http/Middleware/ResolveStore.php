@@ -26,13 +26,41 @@ class ResolveStore
         return $next($request);
     }
 
-    /** La tienda activa de un dominio, o null. */
+    /** La tienda activa de un dominio (stores.domain o, si no hay, un alias de shop.domain_aliases), o null. */
     public static function forHost(string $host): ?Store
     {
-        return Store::query()
-            ->where('domain', strtolower($host))
+        $host = strtolower($host);
+
+        $store = Store::query()
+            ->where('domain', $host)
             ->where('is_active', true)
             ->first();
+
+        if ($store === null && ($slug = self::aliases()[$host] ?? null) !== null) {
+            $store = Store::query()->where('slug', $slug)->where('is_active', true)->first();
+        }
+
+        return $store;
+    }
+
+    /**
+     * Dominios adicionales de config('shop.domain_aliases') ("dominio=slug,otro=slug"): dominio => slug.
+     *
+     * @return array<string, string>
+     */
+    public static function aliases(): array
+    {
+        $aliases = [];
+
+        foreach (explode(',', (string) config('shop.domain_aliases')) as $pair) {
+            [$domain, $slug] = array_pad(array_map('trim', explode('=', $pair, 2)), 2, '');
+
+            if ($domain !== '' && $slug !== '') {
+                $aliases[strtolower($domain)] = $slug;
+            }
+        }
+
+        return $aliases;
     }
 
     /**

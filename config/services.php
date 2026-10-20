@@ -29,10 +29,12 @@ return [
     ],
 
     // Inicio de sesión de clientes con Google. Sin credenciales, el botón no se muestra.
-    // La URL de retorno no va aquí: se arma con el dominio de la tienda actual (/auth/google/callback).
+    // La URL de retorno real se arma con el dominio de la tienda actual (GoogleAuthController::callbackUrl). Socialite
+    // exige la llave 'redirect' y truena con un 500 si no existe; esta es solo su valor por defecto.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => '/auth/google/callback',
     ],
 
     // Avisos al dueño por un bot de Telegram. Si falta cualquiera de los dos, no se manda nada.

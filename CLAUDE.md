@@ -482,3 +482,38 @@ Sensación: cancha y calle, energía, grafiti.
 - SEO: cada página de contenido y de error lleva <title> con el nombre de la
   tienda y meta description propia (del texto de la página). Los títulos ya no
   llevan el sufijo " - Laravel".
+
+## Recuperar y cambiar la contraseña del panel (fase 6.4c)
+- Solo personal (guard web, tabla users, broker "users"). Los tokens van en
+  password_reset_tokens (la de clientes es customer_password_reset_tokens: un token
+  de una no sirve en la otra) y vencen a los 60 minutos, de un solo uso; pedir uno
+  nuevo anula el anterior. El broker deja un enlace por minuto por usuario.
+- Páginas propias en app/Filament/Auth (NO en app/Filament/Pages: esa carpeta se
+  descubre sola como páginas del panel): Login, RequestPasswordReset, ResetPassword y
+  EditProfile, activadas en AdminPanelProvider (login, passwordReset, profile).
+- Pedir enlace: siempre el mismo mensaje ("Si el correo existe, te enviamos un
+  enlace…") exista o no el correo, tenga o no acceso al panel, o ya se haya mandado
+  uno hace poco. La pantalla de nueva contraseña también da el mismo error para un
+  token malo que para un correo inexistente (la de Filament revelaría qué correos
+  existen con un enlace armado a mano). Si el envío falla, se registra en el log.
+- Correo: PanelResetPassword, en cola, con la marca de la tienda del dominio desde el
+  que se pidió (ResolveStore::forHost; un dominio sin tienda usa el nombre de la app y
+  los colores de Copper's). El enlace se arma con el esquema y dominio de esa petición
+  al crear la notificación (el trabajo en cola ya no tiene petición): abre el mismo
+  dominio, nunca otro ni APP_URL. Vistas mail/panel-reset-password(.text).
+- Límites (RateLimiter, por IP detrás del proxy: ver trustProxies al desplegar):
+  pedir enlace 5 por minuto por correo+IP y 30 por hora por IP; guardar contraseña
+  nueva 10 por minuto por IP y 5 por minuto por correo; login del panel 5 fallos por
+  minuto por correo+IP y 30 por hora por IP (solo cuentan los fallos), además del
+  límite propio de Filament (5 por minuto por IP).
+- Perfil (/admin/mi-perfil; /profile ya es "Datos de la tienda"): nombre, correo y
+  contraseña de quien entró. Cambiar correo o contraseña pide la contraseña actual.
+  Al cambiarla, la sesión actual sigue y las demás se cierran (AuthenticateSession del
+  panel compara la huella de la contraseña; además se renueva remember_token). Al
+  restablecer con el enlace pasa igual. La página no lleva tienda en la dirección y el
+  menú de Filament truena sin una: EditProfile fija la tienda por defecto del usuario.
+- Usuarios (solo owner): acción "Restablecer contraseña" en la lista y en la edición.
+  Manda el enlace al empleado (no genera ni muestra contraseñas temporales: no hay
+  columna que obligue a cambiarla). Solo a empleados: no a otro owner ni a sí mismo
+  (para eso está "Mi perfil"). La regla se vuelve a comprobar al ejecutar
+  (SendPasswordLinkAction::allowed). El staff ni siquiera ve el recurso Usuarios.

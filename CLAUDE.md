@@ -520,8 +520,8 @@ Sensación: cancha y calle, energía, grafiti.
 
 ## Demo con túnel HTTPS (ngrok) y proxies de confianza (D2)
 - TRUSTED_PROXIES (.env, ver .env.example): a qué proxies les cree Laravel
-  X-Forwarded-For, -Port y -Proto (App\Support\TrustedProxies, llamado desde
-  bootstrap/app.php). Vacío = ninguno (lo seguro: un X-Forwarded-Proto inventado no
+  X-Forwarded-For, -Port y -Proto (App\Support\TrustedProxies::apply, llamado desde
+  AppServiceProvider::boot con config('app.trusted_proxies'); ver D3). Vacío = ninguno (lo seguro: un X-Forwarded-Proto inventado no
   cambia nada). Local con ngrok: `*`. Producción: la IP real del proxy (varias con
   coma, o CIDR); nunca `*` con el puerto de la app expuesto. X-Forwarded-Host NO se
   confía: la tienda sale del Host de la petición y un encabezado no debe cambiarla.
@@ -538,3 +538,29 @@ Sensación: cancha y calle, energía, grafiti.
   `npm run build` y `php artisan serve` + `php artisan queue:listen` aparte.
 - config/services.php lleva `google.redirect`: Socialite truena con 500 si la llave
   no existe (las pruebas con driver simulado no lo ven; TunnelProxyTest usa el real).
+
+### https detrás del túnel (D3)
+- Causa del bug de D2: TRUSTED_PROXIES se leía con env() dentro de withMiddleware en
+  bootstrap/app.php. Ese closure corre al crear el kernel, ANTES de que Laravel cargue
+  el .env, así que env() daba null y nunca se confiaba en el proxy; las pruebas no lo
+  veían porque llamaban a la pieza directamente. Regla: en bootstrap/app.php no se usa
+  env() (solo valores fijos); lo que sale del .env se lee en config/ (también así
+  funciona con `config:cache`) y se aplica desde un proveedor.
+- Ahora: config/app.php `trusted_proxies` => env('TRUSTED_PROXIES') y
+  AppServiceProvider::boot llama TrustedProxies::apply(...) (que reinicia el estado
+  estático de TrustProxies en cada arranque).
+- Red de seguridad: si APP_URL empieza con https://, AppServiceProvider fuerza
+  URL::forceScheme('https') (assets de Vite, Ziggy, redirects y correos salen https
+  aunque el proxy no mande X-Forwarded-Proto; también en producción). Con APP_URL http
+  (local) no cambia nada. Ojo: con APP_URL=https en el .env, entrar por
+  http://coppers.localhost:8000 genera enlaces https que no cargan; para trabajar en
+  local vuelve APP_URL a http://localhost (y vacía TRUSTED_PROXIES).
+- phpunit.xml fija APP_URL=http://localhost, TRUSTED_PROXIES, STORE_DOMAIN_ALIASES,
+  SESSION_SECURE_COOKIE y las credenciales de Google (vacías): el .env de la demo no debe
+  cambiar las pruebas (con credenciales reales, el botón de Google aparecía en todas).
+- TunnelHttpsTest arma la aplicación completa con variables de entorno como las del
+  .env (refreshApplication) y manda Host del túnel + X-Forwarded-Proto https: comprueba
+  assets, Ziggy, cookie segura y redirect_uri de Google con https; cada mecanismo (proxy
+  solo, red de seguridad sola, nada de confianza por defecto) por separado. Para
+  reproducir con un servidor real: base SQLite temporal fuera del repositorio y
+  `php artisan serve --port=8001` con DB_* en el entorno (nunca el 8000 del dueño).

@@ -6,6 +6,7 @@ use App\Http\Middleware\AuthenticateCustomerSession;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Observers\OrderObserver;
+use App\Support\TrustedProxies;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Auth\Events\Login;
@@ -13,6 +14,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Number;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,6 +33,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Detrás de un túnel o balanceador solo se confía en los proxies de TRUSTED_PROXIES (ninguno si está vacío).
+        TrustedProxies::apply(config('app.trusted_proxies'));
+
+        // Red de seguridad: si la app se publica con https (APP_URL empieza con https://), todas las direcciones
+        // (assets, Ziggy, redirects, correos) salen con https aunque el proxy no mande X-Forwarded-Proto. Con un
+        // APP_URL http (local) no cambia nada.
+        if (str_starts_with(strtolower((string) config('app.url')), 'https://')) {
+            URL::forceScheme('https');
+        }
+
         Order::observe(OrderObserver::class);
 
         // Al iniciar sesión un cliente se anota la contraseña con la que entró, para poder cerrar sus

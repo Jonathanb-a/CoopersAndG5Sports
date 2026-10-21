@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 
 /**
@@ -13,22 +13,26 @@ use Illuminate\Http\Request;
 class TrustedProxies
 {
     /**
-     * Aplica TRUSTED_PROXIES al middleware de Laravel. Se confía en X-Forwarded-For, -Port y -Proto (IP del cliente,
-     * puerto y https), pero NO en X-Forwarded-Host: el dominio de la tienda sale del Host de la petición, y un
-     * encabezado reenviado no debe poder cambiarlo.
+     * Aplica TRUSTED_PROXIES al middleware TrustProxies de Laravel (que ya va en la pila global y lee estos valores
+     * en cada petición). Se confía en X-Forwarded-For, -Port y -Proto (IP del cliente, puerto y https), pero NO en
+     * X-Forwarded-Host: el dominio de la tienda sale del Host de la petición, y un encabezado reenviado no debe
+     * poder cambiarlo.
+     *
+     * Debe llamarse con el .env ya cargado (desde un proveedor, con config('app.trusted_proxies')); en
+     * bootstrap/app.php env() todavía devuelve null y el proxy nunca se confiaba.
      */
-    public static function configure(Middleware $middleware, ?string $value): void
+    public static function apply(?string $value): void
     {
+        TrustProxies::flushState();
+
         $proxies = self::parse($value);
 
         if ($proxies === null) {
             return;
         }
 
-        $middleware->trustProxies(
-            at: $proxies,
-            headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO,
-        );
+        TrustProxies::at($proxies);
+        TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO);
     }
 
     /**

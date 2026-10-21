@@ -7,7 +7,6 @@ use App\Models\Customer;
 use App\Models\Store;
 use App\Notifications\CustomerResetPassword;
 use App\Support\TrustedProxies;
-use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
@@ -49,11 +48,10 @@ class TunnelProxyTest extends TestCase
         parent::tearDown();
     }
 
-    /** Lo que hace TRUSTED_PROXIES en bootstrap/app.php. */
+    /** Lo que hace AppServiceProvider con TRUSTED_PROXIES (config app.trusted_proxies). */
     private function trust(?string $value): void
     {
-        TrustProxies::flushState();
-        TrustedProxies::configure(new Middleware, $value);
+        TrustedProxies::apply($value);
     }
 
     private function viaTunnel(string $path = '/')

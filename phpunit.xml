@@ -30,6 +30,13 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <!-- Nunca avisar por el bot real del .env: las pruebas que lo necesitan lo configuran y usan Http::fake. -->
+        <!-- Lo del .env de la demo (túnel https) no debe cambiar las pruebas: cada una arma lo suyo. -->
+        <env name="APP_URL" value="http://localhost"/>
+        <env name="TRUSTED_PROXIES" value=""/>
+        <env name="STORE_DOMAIN_ALIASES" value=""/>
+        <env name="SESSION_SECURE_COOKIE" value="false"/>
+        <env name="GOOGLE_CLIENT_ID" value=""/>
+        <env name="GOOGLE_CLIENT_SECRET" value=""/>
         <env name="TELEGRAM_BOT_TOKEN" value=""/>
         <env name="TELEGRAM_OWNER_CHAT_ID" value=""/>
     </php>

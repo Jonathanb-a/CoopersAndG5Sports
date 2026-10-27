@@ -43,4 +43,34 @@ return [
         'g5' => 'G5',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tiendas
+    |--------------------------------------------------------------------------
+    |
+    | Las dos tiendas que crean app:setup-produccion y el DatabaseSeeder (slug => datos). El dominio
+    | sale de COPPERS_DOMAIN y G5_DOMAIN; en producción son obligatorios. Sin ellos el seeder usa los
+    | dominios locales (coppers.localhost y g5.localhost).
+    |
+    */
+
+    'stores' => [
+        'coppers' => ['name' => "Copper's", 'theme' => 'coppers', 'domain' => env('COPPERS_DOMAIN')],
+        'g5' => ['name' => 'Sports G5', 'theme' => 'g5', 'domain' => env('G5_DOMAIN')],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Owner inicial
+    |--------------------------------------------------------------------------
+    |
+    | Cuenta del owner que crean app:setup-produccion y el DatabaseSeeder. Se leen por config (no con env())
+    | para que funcionen también con php artisan config:cache.
+    |
+    */
+
+    'admin_email' => env('ADMIN_EMAIL'),
+
+    'admin_password' => env('ADMIN_PASSWORD'),
+
 ];

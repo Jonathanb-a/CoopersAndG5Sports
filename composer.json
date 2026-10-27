@@ -10,6 +10,7 @@
         "ext-bcmath": "*",
         "ext-gd": "*",
         "ext-intl": "*",
+        "ext-pdo_mysql": "*",
         "ext-zip": "*",
         "filament/filament": "^5.9",
         "inertiajs/inertia-laravel": "^2.0",

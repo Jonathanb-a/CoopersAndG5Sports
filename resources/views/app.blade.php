@@ -29,6 +29,14 @@
             @endif
         @endisset
 
+        @php($favicon = $page['props']['store']['theme'] ?? null)
+        @if (in_array($favicon, ['coppers', 'g5'], true))
+            {{-- Ícono de la pestaña: el de la tienda del dominio (public/brand/{tema}/favicon-*.png). --}}
+            <link rel="icon" type="image/png" sizes="32x32" href="{{ asset("brand/{$favicon}/favicon-32.png") }}">
+            <link rel="icon" type="image/png" sizes="192x192" href="{{ asset("brand/{$favicon}/favicon-192.png") }}">
+            <link rel="apple-touch-icon" href="{{ asset("brand/{$favicon}/favicon-192.png") }}">
+        @endif
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 

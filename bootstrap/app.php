@@ -18,15 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Detrás del proxy de Railway: esquema (https), host y puerto reales salen de X-Forwarded-*.
-        $middleware->trustProxies(
-            at: '*',
-            headers: Request::HEADER_X_FORWARDED_FOR
-                | Request::HEADER_X_FORWARDED_HOST
-                | Request::HEADER_X_FORWARDED_PORT
-                | Request::HEADER_X_FORWARDED_PROTO
-                | Request::HEADER_X_FORWARDED_PREFIX,
-        );
+        // Los proxies de confianza (TRUSTED_PROXIES) NO se leen aquí: este closure corre antes de cargar el .env.
+        // Ver App\Providers\AppServiceProvider y App\Support\TrustedProxies.
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

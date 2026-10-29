@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Proxies de confianza
+    |--------------------------------------------------------------------------
+    |
+    | TRUSTED_PROXIES: vacío = ninguno; * = cualquiera (solo local con túnel); o IPs/CIDR separados por coma.
+    | Se lee aquí y no en bootstrap/app.php: ahí corre antes de que se cargue el .env y env() devuelve null.
+    | Lo aplica App\Providers\AppServiceProvider con App\Support\TrustedProxies::apply().
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

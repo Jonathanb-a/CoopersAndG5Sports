@@ -482,3 +482,85 @@ Sensación: cancha y calle, energía, grafiti.
 - SEO: cada página de contenido y de error lleva <title> con el nombre de la
   tienda y meta description propia (del texto de la página). Los títulos ya no
   llevan el sufijo " - Laravel".
+
+## Recuperar y cambiar la contraseña del panel (fase 6.4c)
+- Solo personal (guard web, tabla users, broker "users"). Los tokens van en
+  password_reset_tokens (la de clientes es customer_password_reset_tokens: un token
+  de una no sirve en la otra) y vencen a los 60 minutos, de un solo uso; pedir uno
+  nuevo anula el anterior. El broker deja un enlace por minuto por usuario.
+- Páginas propias en app/Filament/Auth (NO en app/Filament/Pages: esa carpeta se
+  descubre sola como páginas del panel): Login, RequestPasswordReset, ResetPassword y
+  EditProfile, activadas en AdminPanelProvider (login, passwordReset, profile).
+- Pedir enlace: siempre el mismo mensaje ("Si el correo existe, te enviamos un
+  enlace…") exista o no el correo, tenga o no acceso al panel, o ya se haya mandado
+  uno hace poco. La pantalla de nueva contraseña también da el mismo error para un
+  token malo que para un correo inexistente (la de Filament revelaría qué correos
+  existen con un enlace armado a mano). Si el envío falla, se registra en el log.
+- Correo: PanelResetPassword, en cola, con la marca de la tienda del dominio desde el
+  que se pidió (ResolveStore::forHost; un dominio sin tienda usa el nombre de la app y
+  los colores de Copper's). El enlace se arma con el esquema y dominio de esa petición
+  al crear la notificación (el trabajo en cola ya no tiene petición): abre el mismo
+  dominio, nunca otro ni APP_URL. Vistas mail/panel-reset-password(.text).
+- Límites (RateLimiter, por IP detrás del proxy: ver trustProxies al desplegar):
+  pedir enlace 5 por minuto por correo+IP y 30 por hora por IP; guardar contraseña
+  nueva 10 por minuto por IP y 5 por minuto por correo; login del panel 5 fallos por
+  minuto por correo+IP y 30 por hora por IP (solo cuentan los fallos), además del
+  límite propio de Filament (5 por minuto por IP).
+- Perfil (/admin/mi-perfil; /profile ya es "Datos de la tienda"): nombre, correo y
+  contraseña de quien entró. Cambiar correo o contraseña pide la contraseña actual.
+  Al cambiarla, la sesión actual sigue y las demás se cierran (AuthenticateSession del
+  panel compara la huella de la contraseña; además se renueva remember_token). Al
+  restablecer con el enlace pasa igual. La página no lleva tienda en la dirección y el
+  menú de Filament truena sin una: EditProfile fija la tienda por defecto del usuario.
+- Usuarios (solo owner): acción "Restablecer contraseña" en la lista y en la edición.
+  Manda el enlace al empleado (no genera ni muestra contraseñas temporales: no hay
+  columna que obligue a cambiarla). Solo a empleados: no a otro owner ni a sí mismo
+  (para eso está "Mi perfil"). La regla se vuelve a comprobar al ejecutar
+  (SendPasswordLinkAction::allowed). El staff ni siquiera ve el recurso Usuarios.
+
+## Demo con túnel HTTPS (ngrok) y proxies de confianza (D2)
+- TRUSTED_PROXIES (.env, ver .env.example): a qué proxies les cree Laravel
+  X-Forwarded-For, -Port y -Proto (App\Support\TrustedProxies::apply, llamado desde
+  AppServiceProvider::boot con config('app.trusted_proxies'); ver D3). Vacío = ninguno (lo seguro: un X-Forwarded-Proto inventado no
+  cambia nada). Local con ngrok: `*`. Producción: la IP real del proxy (varias con
+  coma, o CIDR); nunca `*` con el puerto de la app expuesto. X-Forwarded-Host NO se
+  confía: la tienda sale del Host de la petición y un encabezado no debe cambiarla.
+  Sin esto, detrás de un túnel https los enlaces (Google, correos) salen con http, la
+  cookie segura no vuelve (419) y la IP de los límites de intentos es la del túnel.
+- STORE_DOMAIN_ALIASES (.env): "dominio=slug,otro=slug". ResolveStore::forHost busca
+  primero stores.domain y, si no hay tienda, el alias (tienda activa). Sirve para una
+  demo con el dominio fijo del túnel sin borrar coppers.localhost ni tocar la base.
+  En producción el dominio real va en stores.domain, no aquí.
+- Para la demo: SESSION_DOMAIN se queda en null (cookie del dominio exacto; con otro
+  valor la cookie no viaja al túnel), SESSION_SECURE_COOKIE=true y APP_URL con el
+  dominio https del túnel. No usar `composer dev` (deja public/hot y la página pide
+  los assets a http://localhost:5173, que no existe para quien entra por el túnel):
+  `npm run build` y `php artisan serve` + `php artisan queue:listen` aparte.
+- config/services.php lleva `google.redirect`: Socialite truena con 500 si la llave
+  no existe (las pruebas con driver simulado no lo ven; TunnelProxyTest usa el real).
+
+### https detrás del túnel (D3)
+- Causa del bug de D2: TRUSTED_PROXIES se leía con env() dentro de withMiddleware en
+  bootstrap/app.php. Ese closure corre al crear el kernel, ANTES de que Laravel cargue
+  el .env, así que env() daba null y nunca se confiaba en el proxy; las pruebas no lo
+  veían porque llamaban a la pieza directamente. Regla: en bootstrap/app.php no se usa
+  env() (solo valores fijos); lo que sale del .env se lee en config/ (también así
+  funciona con `config:cache`) y se aplica desde un proveedor.
+- Ahora: config/app.php `trusted_proxies` => env('TRUSTED_PROXIES') y
+  AppServiceProvider::boot llama TrustedProxies::apply(...) (que reinicia el estado
+  estático de TrustProxies en cada arranque).
+- Red de seguridad: si APP_URL empieza con https://, AppServiceProvider fuerza
+  URL::forceScheme('https') (assets de Vite, Ziggy, redirects y correos salen https
+  aunque el proxy no mande X-Forwarded-Proto; también en producción). Con APP_URL http
+  (local) no cambia nada. Ojo: con APP_URL=https en el .env, entrar por
+  http://coppers.localhost:8000 genera enlaces https que no cargan; para trabajar en
+  local vuelve APP_URL a http://localhost (y vacía TRUSTED_PROXIES).
+- phpunit.xml fija APP_URL=http://localhost, TRUSTED_PROXIES, STORE_DOMAIN_ALIASES,
+  SESSION_SECURE_COOKIE y las credenciales de Google (vacías): el .env de la demo no debe
+  cambiar las pruebas (con credenciales reales, el botón de Google aparecía en todas).
+- TunnelHttpsTest arma la aplicación completa con variables de entorno como las del
+  .env (refreshApplication) y manda Host del túnel + X-Forwarded-Proto https: comprueba
+  assets, Ziggy, cookie segura y redirect_uri de Google con https; cada mecanismo (proxy
+  solo, red de seguridad sola, nada de confianza por defecto) por separado. Para
+  reproducir con un servidor real: base SQLite temporal fuera del repositorio y
+  `php artisan serve --port=8001` con DB_* en el entorno (nunca el 8000 del dueño).

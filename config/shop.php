@@ -38,6 +38,19 @@ return [
 
     'max_open_reservations' => 3,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dominios adicionales (demo con túnel)
+    |--------------------------------------------------------------------------
+    |
+    | STORE_DOMAIN_ALIASES=dominio=slug,otro=slug: dominios que se resuelven a una tienda sin tocar
+    | stores.domain (por ejemplo el dominio fijo de ngrok para Copper's). Solo para demos locales;
+    | en producción, el dominio real va en stores.domain.
+    |
+    */
+
+    'domain_aliases' => (string) env('STORE_DOMAIN_ALIASES', ''),
+
     'order_prefixes' => [
         'coppers' => 'CP',
         'g5' => 'G5',

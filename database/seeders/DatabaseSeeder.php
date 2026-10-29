@@ -19,29 +19,43 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $email = env('ADMIN_EMAIL');
-        $password = env('ADMIN_PASSWORD');
+        $email = config('shop.admin_email');
+        $password = config('shop.admin_password');
 
         if (! $email || ! $password) {
             throw new RuntimeException('Define ADMIN_EMAIL y ADMIN_PASSWORD en .env antes de correr el seeder.');
         }
 
-        $stores = [
-            'coppers' => Store::updateOrCreate(
-                ['slug' => 'coppers'],
-                ['name' => "Copper's", 'domain' => 'coppers.localhost', 'theme' => 'coppers', 'is_active' => true],
-            ),
-            'g5' => Store::updateOrCreate(
-                ['slug' => 'g5'],
-                ['name' => 'Sports G5', 'domain' => 'g5.localhost', 'theme' => 'g5', 'is_active' => true],
-            ),
-        ];
+        // Dominios de COPPERS_DOMAIN y G5_DOMAIN (config/shop.php) o, sin ellos, los locales.
+        $stores = [];
+        foreach (config('shop.stores') as $slug => $data) {
+            $stores[$slug] = Store::updateOrCreate(
+                ['slug' => $slug],
+                ['name' => $data['name'], 'domain' => $data['domain'] ?: $slug.'.localhost', 'theme' => $data['theme'], 'is_active' => true],
+            );
+        }
 
         User::updateOrCreate(
             ['email' => $email],
             ['name' => 'Administrador', 'password' => $password, 'role' => UserRole::Owner],
         );
 
+        // En producción no hay staff ni catálogo de demostración: solo tiendas, owner y borradores de páginas.
+        if (! app()->environment('production')) {
+            $this->seedDemoData($stores, $password);
+        }
+
+        // Borradores de las páginas de contenido y legales (no pisa las que ya existan).
+        $this->call(StorePagesSeeder::class);
+    }
+
+    /**
+     * Staff y productos de demostración (no se crean en producción).
+     *
+     * @param  array<string, Store>  $stores
+     */
+    private function seedDemoData(array $stores, string $password): void
+    {
         // Staff de prueba: usan la misma contraseña que el owner (ADMIN_PASSWORD).
         $staff = [
             'coppers' => ['name' => "Staff Copper's", 'email' => 'staff@coppers.localhost'],
@@ -137,8 +151,5 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
-
-        // Borradores de las páginas de contenido y legales (no pisa las que ya existan).
-        $this->call(StorePagesSeeder::class);
     }
 }
